@@ -3,6 +3,7 @@ package dev.starfall;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
+import net.minecraft.client.gui.Click;
 
 public class StarfallScreen extends Screen {
  public StarfallScreen(){super(Text.literal("Starfall Client"));}
@@ -22,13 +23,14 @@ public class StarfallScreen extends Screen {
   int c=enabled?0xFF244D66:0xFF303746; d.fill(cx-90,cy-10,cx+90,cy+12,c);
   d.drawCenteredTextWithShadow(textRenderer,label+"  "+(enabled?"ON":"OFF"),cx,cy-4,enabled?0xFF9AE6B4:0xFFD2D8E2);
  }
- @Override public boolean mouseClicked(double x,double y,int button){
+ @Override public boolean mouseClicked(Click click, boolean doubled){
+  double x=click.x(), y=click.y();
   int cx=width/2,cy=height/2;
-  if(button==0&&x>=cx-90&&x<=cx+90){
+  if(click.button()==0&&x>=cx-90&&x<=cx+90){
    if(y>=cy-45&&y<=cy-23)StarfallClient.containers=!StarfallClient.containers;
    if(y>=cy-15&&y<=cy+7)StarfallClient.spawners=!StarfallClient.spawners;
   }
-  return super.mouseClicked(x,y,button);
+  return super.mouseClicked(click,doubled);
  }
  @Override public boolean shouldPause(){return false;}
 }
