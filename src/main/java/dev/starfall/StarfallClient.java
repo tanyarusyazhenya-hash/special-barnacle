@@ -16,8 +16,8 @@ public class StarfallClient implements ClientModInitializer {
  private static final KeyBinding.Category CATEGORY = KeyBinding.Category.create(Identifier.of("starfall", "general"));
  @Override public void onInitializeClient() {
   menuKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.starfall.menu", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT,CATEGORY));
-  containersKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.starfall.containers",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_K,"category.starfall"));
-  spawnersKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.starfall.spawners",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_J,"category.starfall"));
+  containersKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.starfall.containers",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_K,CATEGORY));
+  spawnersKey=KeyBindingHelper.registerKeyBinding(new KeyBinding("key.starfall.spawners",InputUtil.Type.KEYSYM,GLFW.GLFW_KEY_J,CATEGORY));
   finder=new Finder();
   ClientTickEvents.END_CLIENT_TICK.register(client->{
    while(menuKey.wasPressed()) client.setScreen(new StarfallScreen());
