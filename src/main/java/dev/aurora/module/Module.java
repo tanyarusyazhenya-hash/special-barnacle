@@ -35,6 +35,16 @@ public abstract class Module {
 		return true;
 	}
 
+	/** Whether this module appears in the HUD module list when enabled. */
+	public boolean showInList() {
+		return hasToggle();
+	}
+
+	/** Short extra text shown next to the name in the HUD module list (e.g. the current mode). */
+	public String info() {
+		return null;
+	}
+
 	public boolean isEnabled() {
 		return enabled;
 	}

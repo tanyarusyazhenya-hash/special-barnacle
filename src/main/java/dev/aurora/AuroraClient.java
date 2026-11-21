@@ -2,6 +2,7 @@ package dev.aurora;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.aurora.gui.ClickGuiScreen;
+import dev.aurora.hud.HudRenderer;
 import dev.aurora.module.ModuleManager;
 import dev.aurora.render.EspBox;
 import dev.aurora.render.EspRenderer;
@@ -9,6 +10,8 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.KeyMapping;
@@ -46,6 +49,11 @@ public class AuroraClient implements ClientModInitializer {
 		});
 
 		WorldRenderEvents.BEFORE_TRANSLUCENT.register(AuroraClient::onWorldRender);
+
+		HudElementRegistry.attachElementAfter(
+			VanillaHudElements.MISC_OVERLAYS,
+			Identifier.fromNamespaceAndPath(MOD_ID, "hud"),
+			(graphics, tickCounter) -> HudRenderer.render(graphics));
 
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
 			ModuleManager.save();

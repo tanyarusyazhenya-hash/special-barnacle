@@ -72,6 +72,11 @@ public class StorageFinder extends Module implements EspProvider {
 	}
 
 	@Override
+	public String info() {
+		return style.mode.get();
+	}
+
+	@Override
 	protected void onEnable() {
 		cooldown = 0;
 	}

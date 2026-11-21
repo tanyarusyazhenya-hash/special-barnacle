@@ -12,7 +12,10 @@ Client-side mod with a ClickGUI and two ESP modules.
 ## Modules
 **StorageFinder**: chests, trapped chests, shulker boxes, droppers (plus ender chests, barrels, dispensers, off by default). Per-type colors, double chests merged.
 **SpawnerFinder**: spawners (and trial spawners, off by default), Y range filter, chat notification.
-Both share: Mode (Outline / Filled / Both / Corners), Outline Opacity, Fill Opacity, Thickness, Color Mode (Static / Rainbow / Pulse / Distance), Through Walls, Range.
+**PlayerESP**: other players, smoothly interpolated. Static color or health color (red to green), optional invisible/spectator players.
+All three ESP modules share: Mode (Outline / Filled / Both / Corners), Outline Opacity, Fill Opacity, Thickness, Color Mode (Static / Rainbow / Pulse / Distance), Through Walls, Range.
+
+**HUD**: watermark, module list (with each module's current mode), FPS, ping, coordinates, speed, facing. Choose the side of the module list and the info stack, color mode (Accent / Rainbow / White), background, opacity, accent bar and text shadow.
 
 ## Building
 Easiest: generate a 1.21.11 template at https://fabricmc.net/develop (Mojang mappings), then copy `src/` over it

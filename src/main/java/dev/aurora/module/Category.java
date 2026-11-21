@@ -2,6 +2,7 @@ package dev.aurora.module;
 
 public enum Category {
 	RENDER("Render"),
+	HUD("HUD"),
 	CLIENT("Client");
 
 	public final String label;

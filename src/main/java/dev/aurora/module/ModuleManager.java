@@ -5,7 +5,9 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.aurora.module.impl.HudModule;
 import dev.aurora.module.impl.InterfaceModule;
+import dev.aurora.module.impl.PlayerESP;
 import dev.aurora.module.impl.SpawnerFinder;
 import dev.aurora.module.impl.StorageFinder;
 import dev.aurora.render.EspBox;
@@ -26,6 +28,8 @@ public final class ModuleManager {
 
 	public static StorageFinder storageFinder;
 	public static SpawnerFinder spawnerFinder;
+	public static PlayerESP playerEsp;
+	public static HudModule hud;
 	public static InterfaceModule ui;
 
 	private ModuleManager() {}
@@ -33,10 +37,18 @@ public final class ModuleManager {
 	public static void init() {
 		storageFinder = new StorageFinder();
 		spawnerFinder = new SpawnerFinder();
+		playerEsp = new PlayerESP();
+		hud = new HudModule();
 		ui = new InterfaceModule();
 		MODULES.add(storageFinder);
 		MODULES.add(spawnerFinder);
+		MODULES.add(playerEsp);
+		MODULES.add(hud);
 		MODULES.add(ui);
+	}
+
+	public static List<Module> all() {
+		return MODULES;
 	}
 
 	public static List<Module> byCategory(Category category) {
