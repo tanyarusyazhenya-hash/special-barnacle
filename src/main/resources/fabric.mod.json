@@ -1,0 +1,11 @@
+{
+ "schemaVersion": 1,
+ "id": "starfall",
+ "version": "${version}",
+ "name": "Starfall Client",
+ "description": "A lightweight utility client with a clean ClickGUI.",
+ "authors": ["Starfall"],
+ "environment": "client",
+ "entrypoints": { "client": ["dev.starfall.StarfallClient"] },
+ "depends": { "fabricloader": ">=0.17.0", "minecraft": "1.21.11", "fabric-api": "*" }
+}
