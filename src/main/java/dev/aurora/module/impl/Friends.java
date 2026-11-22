@@ -44,6 +44,8 @@ public class Friends extends Module {
 	public final ActionSetting addNearest = add(new ActionSetting("Add Nearest Player", this::addNearest));
 	public final ActionSetting clearAll = add(new ActionSetting("Clear Friends", this::clear));
 
+	public final ActionSetting openGroups = add(new ActionSetting("Open Groups Window",
+		() -> Minecraft.getInstance().setScreen(new dev.aurora.gui.GroupsScreen(Minecraft.getInstance().screen))));
 	public final ActionSetting addNearestToTeam = add(new ActionSetting("Add Nearest To Team", this::addNearestToTeam));
 
 	private final Set<String> names = new TreeSet<>();
@@ -84,6 +86,25 @@ public class Friends extends Module {
 			}
 		}
 		return false;
+	}
+
+	public java.util.List<String> groupNames() {
+		return new java.util.ArrayList<>(groups.keySet());
+	}
+
+	public java.util.List<String> groupMembers(String group) {
+		Set<String> g = groups.get(group);
+		return g == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(g);
+	}
+
+	public void groupCreate(String group) {
+		groups.computeIfAbsent(group.toLowerCase(Locale.ROOT), k -> new TreeSet<>());
+		saveGroups();
+	}
+
+	public void groupDelete(String group) {
+		groups.remove(group.toLowerCase(Locale.ROOT));
+		saveGroups();
 	}
 
 	public boolean groupAdd(String group, String player) {

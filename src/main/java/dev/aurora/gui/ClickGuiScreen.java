@@ -226,6 +226,15 @@ public class ClickGuiScreen extends Screen {
 				moveDy = (int) clickY - winY;
 			}
 		});
+		int gx = bx - 66;
+		boolean hoverGroups = hit(mx, my, gx, by, 60, 16);
+		GuiUtil.rrect(g, gx, by, 60, 16, 4, c(accent, hoverGroups ? 0.35f : 0.18f));
+		g.drawString(font, "Groups", gx + 30 - font.width("Groups") / 2, by + 4, c(0xFFFFFF, 1f), false);
+		addRegion(gx, by, 60, 16, (clickX, clickY, button) -> {
+			if (button == 0) {
+				minecraft.setScreen(new GroupsScreen(this));
+			}
+		});
 		addRegion(bx, by, 16, 16, (clickX, clickY, button) -> {
 			if (button == 0) {
 				minimized = !minimized;
