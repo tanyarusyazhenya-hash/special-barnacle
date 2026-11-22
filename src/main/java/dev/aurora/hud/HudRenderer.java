@@ -159,7 +159,8 @@ public final class HudRenderer {
 			others.sort(Comparator.comparingDouble(p -> mc.player.distanceToSqr(p)));
 			for (int i = 0; i < Math.min(6, others.size()); i++) {
 				AbstractClientPlayer p = others.get(i);
-				left.add(p.getName().getString() + " §7" + (int) mc.player.distanceTo(p) + "m");
+				String prefix = ModuleManager.friends.isFriend(p) ? "§b" : "";
+				left.add(prefix + p.getName().getString() + " §7" + (int) mc.player.distanceTo(p) + "m");
 			}
 		}
 		if (h.waypointList.value && ModuleManager.waypoints.isEnabled()) {

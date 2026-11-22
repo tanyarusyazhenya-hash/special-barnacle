@@ -3,6 +3,7 @@ package dev.aurora.module;
 public enum Category {
 	RENDER("Render"),
 	WORLD("World"),
+	UTILITY("Utility"),
 	HUD("HUD"),
 	CLIENT("Client");
 

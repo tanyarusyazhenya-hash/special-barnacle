@@ -5,10 +5,12 @@ import dev.aurora.gui.ClickGuiScreen;
 import dev.aurora.hud.HudRenderer;
 import dev.aurora.hud.NametagRenderer;
 import dev.aurora.module.ModuleManager;
+import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.render.EspBox;
 import dev.aurora.render.EspLine;
 import dev.aurora.render.EspRenderer;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -19,6 +21,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
@@ -52,6 +55,10 @@ public class AuroraClient implements ClientModInitializer {
 
 		WorldRenderEvents.BEFORE_TRANSLUCENT.register(AuroraClient::onWorldRender);
 
+		ClientCommandRegistrationCallback.EVENT.register(
+			(dispatcher, registryAccess) -> ModuleManager.friends.registerCommands(dispatcher));
+		AutoReconnect.register();
+
 		HudElementRegistry.attachElementAfter(
 			VanillaHudElements.MISC_OVERLAYS,
 			Identifier.fromNamespaceAndPath(MOD_ID, "hud"),
@@ -68,6 +75,7 @@ public class AuroraClient implements ClientModInitializer {
 
 	private static void onWorldRender(WorldRenderContext context) {
 		Minecraft mc = Minecraft.getInstance();
+		ModuleManager.frame(mc);
 		if (mc.level == null || mc.player == null) {
 			return;
 		}
@@ -77,7 +85,8 @@ public class AuroraClient implements ClientModInitializer {
 		Vec3 camera = context.worldState().cameraRenderState.pos;
 		if (ModuleManager.tracers.isEnabled()) {
 			float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-			Vec3 start = camera.add(mc.player.getViewVector(partial).scale(0.6));
+			Entity viewer = mc.getCameraEntity() != null ? mc.getCameraEntity() : mc.player;
+			Vec3 start = camera.add(viewer.getViewVector(partial).scale(0.6));
 			ModuleManager.collectLines(lines, start);
 		}
 		if (boxes.isEmpty() && lines.isEmpty()) {

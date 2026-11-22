@@ -85,8 +85,21 @@ public class ClickGuiScreen extends Screen {
 		int i = 0;
 		for (Category c : Category.values()) {
 			final int index = i++;
-			int[] pos = POSITIONS.computeIfAbsent(c, k -> new int[]{24 + index * (W + 12), 24});
+			// x < 0 means "not placed yet"; init() lays the panels out once the screen size is known
+			int[] pos = POSITIONS.computeIfAbsent(c, k -> new int[]{-1, 24});
 			panels.add(new Panel(c, pos));
+		}
+	}
+
+	@Override
+	protected void init() {
+		int n = panels.size();
+		int gap = n > 1 ? Math.max(2, Math.min(12, (width - 24 - n * W) / (n - 1))) : 12;
+		for (int i = 0; i < n; i++) {
+			int[] pos = panels.get(i).pos;
+			if (pos[0] < 0) {
+				pos[0] = 12 + i * (W + gap);
+			}
 		}
 	}
 

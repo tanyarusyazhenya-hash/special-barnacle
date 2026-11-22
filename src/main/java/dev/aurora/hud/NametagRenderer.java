@@ -1,6 +1,7 @@
 package dev.aurora.hud;
 
 import dev.aurora.module.ModuleManager;
+import dev.aurora.module.impl.Friends;
 import dev.aurora.module.impl.Nametags;
 import dev.aurora.util.ColorUtil;
 import dev.aurora.util.GuiUtil;
@@ -9,14 +10,15 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Locale;
 
 /**
- * Draws nametags by projecting each player's position onto the screen. Accurate in first person;
- * it hides itself in third person, and small drift is possible while the FOV changes (sprinting).
+ * Draws nametags by projecting each player's position onto the screen. Accurate in first person
+ * (including Freecam, which uses the camera entity); it hides itself in third person, and small
+ * drift is possible while the FOV changes (sprinting).
  */
 public final class NametagRenderer {
 	private NametagRenderer() {}
@@ -32,14 +34,15 @@ public final class NametagRenderer {
 		}
 
 		Font font = mc.font;
-		Player me = mc.player;
+		Entity viewer = mc.getCameraEntity() != null ? mc.getCameraEntity() : mc.player;
+		Friends friends = ModuleManager.friends;
 		float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		int gw = g.guiWidth();
 		int gh = g.guiHeight();
 
-		Vec3 cam = me.getEyePosition(partial);
-		double yaw = Math.toRadians(Mth.lerp(partial, me.yRotO, me.getYRot()));
-		double pitch = Math.toRadians(Mth.lerp(partial, me.xRotO, me.getXRot()));
+		Vec3 cam = viewer.getEyePosition(partial);
+		double yaw = Math.toRadians(Mth.lerp(partial, viewer.yRotO, viewer.getYRot()));
+		double pitch = Math.toRadians(Mth.lerp(partial, viewer.xRotO, viewer.getXRot()));
 		double sy = Math.sin(yaw), cy = Math.cos(yaw), sp = Math.sin(pitch), cp = Math.cos(pitch);
 		Vec3 forward = new Vec3(-sy * cp, -sp, cy * cp);
 		Vec3 right = new Vec3(-cy, 0, -sy);
@@ -50,10 +53,14 @@ public final class NametagRenderer {
 		int accent = ModuleManager.ui.accent();
 
 		for (AbstractClientPlayer p : mc.level.players()) {
-			if (p == me || p.isSpectator() || (!nt.showInvisible.value && p.isInvisible())) {
+			if (p == mc.player || p.isSpectator() || (!nt.showInvisible.value && p.isInvisible())) {
 				continue;
 			}
-			double dist = me.distanceTo(p);
+			boolean friend = friends.isFriend(p);
+			if (friend && friends.hideFriends()) {
+				continue;
+			}
+			double dist = viewer.distanceTo(p);
 			if (dist > nt.maxDistance.value) {
 				continue;
 			}
@@ -79,7 +86,9 @@ public final class NametagRenderer {
 			float frac = Mth.clamp(p.getHealth() / Math.max(1f, p.getMaxHealth()), 0f, 1f);
 
 			int nameColor;
-			if (nt.colorMode.is("Health")) {
+			if (friend) {
+				nameColor = friends.color.rgb();
+			} else if (nt.colorMode.is("Health")) {
 				nameColor = ColorUtil.hsb(frac * 0.33f, 0.7f, 1f);
 			} else if (nt.colorMode.is("Accent")) {
 				nameColor = accent;
@@ -87,7 +96,11 @@ public final class NametagRenderer {
 				nameColor = nt.staticColor.rgb();
 			}
 
-			StringBuilder sb = new StringBuilder(p.getName().getString());
+			StringBuilder sb = new StringBuilder();
+			if (friend && friends.tag.value) {
+				sb.append("[F] ");
+			}
+			sb.append(p.getName().getString());
 			if (nt.health.value) {
 				String code = frac > 0.66f ? "§a" : frac > 0.33f ? "§e" : "§c";
 				sb.append(' ').append(code).append(String.format(Locale.ROOT, "%.1f", hp));

@@ -55,11 +55,15 @@ public class Tracers extends Module implements LineProvider {
 				if (p == mc.player || p.isSpectator() || mc.player.distanceToSqr(p) > r2) {
 					continue;
 				}
+				boolean friend = ModuleManager.friends.isFriend(p);
+				if (friend && ModuleManager.friends.hideFriends()) {
+					continue;
+				}
 				Vec3 pos = new Vec3(
 					Mth.lerp(partial, p.xo, p.getX()),
 					Mth.lerp(partial, p.yo, p.getY()) + p.getBbHeight() * 0.5,
 					Mth.lerp(partial, p.zo, p.getZ()));
-				targets.add(new TracerTarget(pos, rgb));
+				targets.add(new TracerTarget(pos, friend ? ModuleManager.friends.color.rgb() : rgb));
 			}
 		}
 		addFrom(storage.value, ModuleManager.storageFinder, ModuleManager.storageFinder.isEnabled(), targets);

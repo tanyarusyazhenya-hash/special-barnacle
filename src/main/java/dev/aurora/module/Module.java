@@ -45,6 +45,11 @@ public abstract class Module {
 		return true;
 	}
 
+	/** If true the module is on only while its bind is held, instead of toggling. */
+	public boolean holdToActivate() {
+		return false;
+	}
+
 	/** Whether this module appears in the HUD module list when enabled. */
 	public boolean showInList() {
 		return hasToggle();

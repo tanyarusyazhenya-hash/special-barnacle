@@ -6,8 +6,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.InputConstants;
+import dev.aurora.module.impl.AutoReconnect;
+import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.BlockFinder;
 import dev.aurora.module.impl.EntityESP;
+import dev.aurora.module.impl.Freecam;
+import dev.aurora.module.impl.Friends;
 import dev.aurora.module.impl.Fullbright;
 import dev.aurora.module.impl.HudModule;
 import dev.aurora.module.impl.InterfaceModule;
@@ -48,6 +52,10 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static Freecam freecam;
+	public static AutoSprint autoSprint;
+	public static AutoReconnect autoReconnect;
+	public static Friends friends;
 	public static HudModule hud;
 	public static InterfaceModule ui;
 
@@ -64,6 +72,10 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		freecam = new Freecam();
+		autoSprint = new AutoSprint();
+		autoReconnect = new AutoReconnect();
+		friends = new Friends();
 		hud = new HudModule();
 		ui = new InterfaceModule();
 
@@ -77,6 +89,10 @@ public final class ModuleManager {
 		MODULES.add(waypoints);
 		MODULES.add(fullbright);
 		MODULES.add(zoom);
+		MODULES.add(freecam);
+		MODULES.add(autoSprint);
+		MODULES.add(autoReconnect);
+		MODULES.add(friends);
 		MODULES.add(hud);
 		MODULES.add(ui);
 
@@ -102,17 +118,38 @@ public final class ModuleManager {
 		return out;
 	}
 
+	/** Runs every rendered frame, before the world is drawn. */
+	public static void frame(Minecraft mc) {
+		zoom.frame(mc);
+		freecam.frame(mc);
+	}
+
 	public static void tick(Minecraft mc) {
+		zoom.installScrollHook();
+		zoom.safetyCheck(mc);
+
 		if (mc.screen == null) {
 			for (Module m : MODULES) {
 				if (!m.hasToggle() || m.bind.key < 0) {
 					continue;
 				}
 				boolean down = InputConstants.isKeyDown(mc.getWindow(), m.bind.key);
-				if (down && !m.keyWasDown) {
+				if (m.holdToActivate()) {
+					if (down != m.isEnabled()) {
+						m.setEnabled(down);
+					}
+				} else if (down && !m.keyWasDown) {
 					m.toggle();
 				}
 				m.keyWasDown = down;
+			}
+		} else {
+			// opening a screen while a hold-bind is down releases it
+			for (Module m : MODULES) {
+				if (m.hasToggle() && m.holdToActivate() && m.isEnabled()) {
+					m.setEnabled(false);
+				}
+				m.keyWasDown = false;
 			}
 		}
 		for (Module m : MODULES) {
@@ -141,8 +178,12 @@ public final class ModuleManager {
 	/** Undo temporary side effects (Zoom changes the FOV option) before the game closes. */
 	public static void shutdown() {
 		save();
+		if (freecam != null) {
+			freecam.setEnabled(false);
+		}
 		if (zoom != null) {
 			zoom.setEnabled(false);
+			zoom.restoreNow(Minecraft.getInstance());
 		}
 	}
 

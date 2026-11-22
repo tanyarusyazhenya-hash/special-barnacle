@@ -2,6 +2,7 @@ package dev.aurora.module.impl;
 
 import dev.aurora.module.Category;
 import dev.aurora.module.Module;
+import dev.aurora.module.ModuleManager;
 import dev.aurora.render.EspBox;
 import dev.aurora.render.EspProvider;
 import dev.aurora.render.EspStyle;
@@ -59,6 +60,11 @@ public class PlayerESP extends Module implements EspProvider {
 			if (distSq > r2) {
 				continue;
 			}
+			Friends friends = ModuleManager.friends;
+			boolean friend = friends.isFriend(p);
+			if (friend && friends.hideFriends()) {
+				continue;
+			}
 
 			double dx = Mth.lerp(partial, p.xo, p.getX()) - p.getX();
 			double dy = Mth.lerp(partial, p.yo, p.getY()) - p.getY();
@@ -66,7 +72,9 @@ public class PlayerESP extends Module implements EspProvider {
 			AABB box = p.getBoundingBox().move(dx, dy, dz).inflate(0.02);
 
 			int rgb;
-			if (colorSource.is("Health")) {
+			if (friend) {
+				rgb = friends.color.rgb();
+			} else if (colorSource.is("Health")) {
 				float frac = Mth.clamp(p.getHealth() / Math.max(1f, p.getMaxHealth()), 0f, 1f);
 				rgb = ColorUtil.hsb(frac * 0.33f, 0.8f, 1f); // red -> green
 			} else {
