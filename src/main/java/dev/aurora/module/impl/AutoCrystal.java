@@ -7,13 +7,13 @@ import dev.aurora.setting.BoolSetting;
 import dev.aurora.setting.NumberSetting;
 import dev.aurora.util.CombatUtil;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -23,20 +23,22 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Places end crystals on obsidian or bedrock next to the nearest enemy player and breaks them.
- * Damage is estimated without armor and without blocks in the way, so it errs on the high side.
- * Friends are never targeted. Off by default every launch. Most servers ban this.
+ * Places end crystals on obsidian or bedrock next to the nearest enemy and breaks them.
+ * Damage is estimated with the game's formula (cover, armor, Blast Protection, difficulty), but
+ * totems and absorption are not counted. Friends are never targeted. The module list in the HUD shows
+ * what it is doing or why it is idle. Off by default every launch. Most servers ban this.
  */
 public class AutoCrystal extends Module {
 	public final BoolSetting place = add(new BoolSetting("Place", true));
 	public final BoolSetting breakCrystals = add(new BoolSetting("Break", true));
+	public final BoolSetting includeMobs = add(new BoolSetting("Target Hostile Mobs", false));
 	public final NumberSetting targetRange = add(new NumberSetting("Target Range", 10, 4, 16, 1));
 	public final NumberSetting placeRange = add(new NumberSetting("Place Range", 4.5, 2.0, 6.0, 0.5));
 	public final NumberSetting breakRange = add(new NumberSetting("Break Range", 4.0, 2.0, 6.0, 0.5));
 	public final NumberSetting placeDelay = add(new NumberSetting("Place Delay (ticks)", 2, 0, 10, 1));
 	public final NumberSetting breakDelay = add(new NumberSetting("Break Delay (ticks)", 1, 0, 10, 1));
-	public final NumberSetting minDamage = add(new NumberSetting("Min Target Damage", 4, 1, 20, 1));
-	public final NumberSetting maxSelf = add(new NumberSetting("Max Self Damage", 8, 1, 20, 1));
+	public final NumberSetting minDamage = add(new NumberSetting("Min Target Damage", 4, 1, 36, 1));
+	public final NumberSetting maxSelf = add(new NumberSetting("Max Self Damage", 10, 1, 36, 1));
 	public final BoolSetting antiSuicide = add(new BoolSetting("Anti Suicide", true));
 	public final BoolSetting autoSwitch = add(new BoolSetting("Auto Switch", true));
 	public final BoolSetting rotate = add(new BoolSetting("Rotate", false));
@@ -44,6 +46,10 @@ public class AutoCrystal extends Module {
 
 	private int placeTimer = 100;
 	private int breakTimer = 100;
+	private String status = "Idle";
+
+	// counters from the last placement scan, used to explain why nothing was placed
+	private int bases, weak, unsafe;
 
 	public AutoCrystal() {
 		super("AutoCrystal", "Places and breaks end crystals near enemies", Category.COMBAT);
@@ -60,13 +66,14 @@ public class AutoCrystal extends Module {
 
 	@Override
 	public String info() {
-		return place.value && breakCrystals.value ? "Place+Break" : place.value ? "Place" : "Break";
+		return status;
 	}
 
 	@Override
 	protected void onEnable() {
 		placeTimer = 100;
 		breakTimer = 100;
+		status = "Idle";
 	}
 
 	@Override
@@ -75,14 +82,20 @@ public class AutoCrystal extends Module {
 		if (p == null || mc.gameMode == null || mc.level == null || mc.screen != null || !p.isAlive()) {
 			return;
 		}
-		if (ModuleManager.freecam.isEnabled() || (pauseWhileUsing.value && p.isUsingItem())) {
+		if (ModuleManager.freecam.isEnabled()) {
+			status = "Freecam is on";
+			return;
+		}
+		if (pauseWhileUsing.value && p.isUsingItem()) {
+			status = "Paused (using item)";
 			return;
 		}
 		placeTimer = Math.min(placeTimer + 1, 100);
 		breakTimer = Math.min(breakTimer + 1, 100);
 
-		AbstractClientPlayer target = CombatUtil.nearestEnemyPlayer(mc, targetRange.value);
+		LivingEntity target = CombatUtil.nearestTarget(mc, targetRange.value, true, includeMobs.value);
 		if (target == null) {
+			status = "No target";
 			return;
 		}
 		double selfHp = p.getHealth() + p.getAbsorptionAmount();
@@ -99,9 +112,12 @@ public class AutoCrystal extends Module {
 					continue;
 				}
 				Vec3 center = crystal.position();
-				double dmgTarget = CombatUtil.explosionDamage(center, target, 6.0);
-				double dmgSelf = CombatUtil.explosionDamage(center, p, 6.0);
-				if (dmgTarget < minDamage.value || !selfSafe(dmgSelf, selfHp)) {
+				double dmgTarget = CombatUtil.explosionDamage(mc, center, target, 6.0);
+				if (dmgTarget < minDamage.value) {
+					continue;
+				}
+				double dmgSelf = CombatUtil.explosionDamage(mc, center, p, 6.0);
+				if (!selfSafe(dmgSelf, selfHp)) {
 					continue;
 				}
 				if (dmgTarget - dmgSelf > bestScore) {
@@ -116,31 +132,48 @@ public class AutoCrystal extends Module {
 				mc.gameMode.attack(p, best);
 				p.swing(InteractionHand.MAIN_HAND);
 				breakTimer = 0;
+				status = "Breaking";
 				return;
 			}
 		}
 
 		// 2. place a new crystal
-		if (place.value && placeTimer >= placeDelay.i()) {
-			BlockPos base = findPlacement(mc, p, target, selfHp);
-			if (base == null) {
-				return;
-			}
-			InteractionHand hand = CombatUtil.holdItem(p, Items.END_CRYSTAL, autoSwitch.value);
-			if (hand == null) {
-				return;
-			}
-			Vec3 top = new Vec3(base.getX() + 0.5, base.getY() + 1.0, base.getZ() + 0.5);
-			if (rotate.value) {
-				look(p, top);
-			}
-			BlockHitResult hit = new BlockHitResult(top, Direction.UP, base, false);
-			InteractionResult result = mc.gameMode.useItemOn(p, hand, hit);
-			if (result.consumesAction()) {
-				p.swing(hand);
-			}
-			placeTimer = 0;
+		if (!place.value) {
+			status = "Waiting for crystals";
+			return;
 		}
+		if (placeTimer < placeDelay.i()) {
+			return;
+		}
+		BlockPos base = findPlacement(mc, p, target, selfHp);
+		if (base == null) {
+			if (bases == 0) {
+				status = "No obsidian or bedrock in range";
+			} else if (weak > 0 && unsafe == 0) {
+				status = "Target too far for damage";
+			} else if (unsafe > 0) {
+				status = "Too dangerous for you";
+			} else {
+				status = "No good spot";
+			}
+			return;
+		}
+		InteractionHand hand = CombatUtil.holdItem(p, Items.END_CRYSTAL, autoSwitch.value);
+		if (hand == null) {
+			status = autoSwitch.value ? "No crystals in hotbar" : "Hold crystals";
+			return;
+		}
+		Vec3 top = new Vec3(base.getX() + 0.5, base.getY() + 1.0, base.getZ() + 0.5);
+		if (rotate.value) {
+			look(p, top);
+		}
+		BlockHitResult hit = new BlockHitResult(top, Direction.UP, base, false);
+		InteractionResult result = mc.gameMode.useItemOn(p, hand, hit);
+		if (result.consumesAction()) {
+			p.swing(hand);
+		}
+		placeTimer = 0;
+		status = "Placing";
 	}
 
 	private boolean selfSafe(double dmgSelf, double selfHp) {
@@ -153,7 +186,10 @@ public class AutoCrystal extends Module {
 		}
 	}
 
-	private BlockPos findPlacement(Minecraft mc, LocalPlayer p, AbstractClientPlayer target, double selfHp) {
+	private BlockPos findPlacement(Minecraft mc, LocalPlayer p, LivingEntity target, double selfHp) {
+		bases = 0;
+		weak = 0;
+		unsafe = 0;
 		Vec3 eye = p.getEyePosition();
 		int r = (int) Math.ceil(placeRange.value);
 		BlockPos origin = p.blockPosition();
@@ -179,12 +215,15 @@ public class AutoCrystal extends Module {
 					if (!mc.level.getEntities(null, space).isEmpty()) {
 						continue;
 					}
-					double dmgTarget = CombatUtil.explosionDamage(top, target, 6.0);
+					bases++;
+					double dmgTarget = CombatUtil.explosionDamage(mc, top, target, 6.0);
 					if (dmgTarget < minDamage.value) {
+						weak++;
 						continue;
 					}
-					double dmgSelf = CombatUtil.explosionDamage(top, p, 6.0);
+					double dmgSelf = CombatUtil.explosionDamage(mc, top, p, 6.0);
 					if (!selfSafe(dmgSelf, selfHp)) {
+						unsafe++;
 						continue;
 					}
 					if (dmgTarget - dmgSelf > bestScore) {
