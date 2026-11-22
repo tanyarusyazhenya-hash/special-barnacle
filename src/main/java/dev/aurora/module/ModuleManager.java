@@ -12,6 +12,8 @@ import dev.aurora.module.impl.KillAura;
 import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.AutoTotem;
+import dev.aurora.module.impl.ClickPearl;
+import dev.aurora.module.impl.TargetHud;
 import dev.aurora.module.impl.BlockFinder;
 import dev.aurora.module.impl.EntityESP;
 import dev.aurora.module.impl.Freecam;
@@ -56,6 +58,8 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static TargetHud targetHud;
+	public static ClickPearl clickPearl;
 	public static Freecam freecam;
 	public static AutoSprint autoSprint;
 	public static AutoTotem autoTotem;
@@ -80,6 +84,8 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		targetHud = new TargetHud();
+		clickPearl = new ClickPearl();
 		freecam = new Freecam();
 		autoSprint = new AutoSprint();
 		autoTotem = new AutoTotem();
@@ -105,11 +111,13 @@ public final class ModuleManager {
 		MODULES.add(autoSprint);
 		MODULES.add(autoTotem);
 		MODULES.add(killAura);
+		MODULES.add(clickPearl);
 		MODULES.add(autoCrystal);
 		MODULES.add(autoAnchor);
 		MODULES.add(autoReconnect);
 		MODULES.add(friends);
 		MODULES.add(hud);
+		MODULES.add(targetHud);
 		MODULES.add(ui);
 
 		// Every toggleable module gets a keybind row at the bottom of its settings.

@@ -9,7 +9,7 @@ import net.minecraft.world.effect.MobEffects;
 /** Client-side night vision. The server is not told about the effect. */
 public class Fullbright extends Module {
 	public Fullbright() {
-		super("Fullbright", "See in the dark (client-side night vision)", Category.WORLD);
+		super("Fullbright", "See in the dark (client-side night vision)", Category.RENDER);
 	}
 
 	@Override

@@ -65,6 +65,7 @@ public class AuroraClient implements ClientModInitializer {
 			(graphics, tickCounter) -> {
 				HudRenderer.render(graphics);
 				NametagRenderer.render(graphics);
+				dev.aurora.hud.TargetHudRenderer.render(graphics);
 			});
 
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {

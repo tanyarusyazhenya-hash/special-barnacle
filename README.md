@@ -41,7 +41,7 @@ Note: ore finders, Fullbright and similar tools are banned on many servers. Use 
 ## Added in v0.4
 - **New ClickGUI** (matches the reference): one window with an orange glow, title bar (minimize and close), category sidebar, a card with the modules of the category and a card with the settings of the selected module. Pill toggles, dropdowns, sliders, color picker, key binds. Left click a module to toggle it, right click to only open its settings. Drag the title bar to move the window.
 - **Orange default theme** (Interface > Theme). The HUD uses the same accent and has an "A" logo badge in the watermark.
-- **AutoTotem** (Utility): keeps a totem in the offhand, with a tick delay, a "swap at health" limit and a hotbar-only option. Off by default; many servers block automation like this.
+- **AutoTotem** (Combat): keeps a totem in the offhand, with a tick delay, a "swap at health" limit and a hotbar-only option. Off by default; many servers block automation like this.
 
 ## Added in v0.5 (Combat tab)
 All three start disabled on every launch, never target friends, and do nothing while Freecam is on. Most servers ban modules like these.
@@ -57,3 +57,8 @@ Easiest: generate a 1.21.11 template at https://fabricmc.net/develop (Mojang map
 (merge `fabric.mod.json`). Or use the included Gradle files after updating the versions in `gradle.properties`
 and adding a Gradle wrapper (`gradle wrapper`). Requires Java 21.
 `./gradlew build` produces the jar in `build/libs/`.
+
+## Added in v0.6
+- **TargetHUD** (HUD tab): card with head, name, smooth health bar and armor/hand items of the entity under your crosshair (or the nearest player), lingers a few seconds.
+- **ClickPearl** (Combat): bind it to a key; throws a pearl instantly and switches back.
+- **AutoTotem** moved to Combat. The Render tab is now **Visuals** and also holds Fullbright and Zoom.

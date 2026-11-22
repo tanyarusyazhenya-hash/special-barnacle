@@ -24,7 +24,7 @@ public class AutoTotem extends Module {
 	private int wait;
 
 	public AutoTotem() {
-		super("AutoTotem", "Keeps a totem in your offhand (off by default)", Category.UTILITY);
+		super("AutoTotem", "Keeps a totem in your offhand (off by default)", Category.COMBAT);
 	}
 
 	@Override

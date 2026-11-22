@@ -31,7 +31,7 @@ public class Zoom extends Module {
 	private boolean hookInstalled;
 
 	public Zoom() {
-		super("Zoom", "Zoom in. Hold the bind, scroll to adjust", Category.UTILITY);
+		super("Zoom", "Zoom in. Hold the bind, scroll to adjust", Category.RENDER);
 		scrollStep.visibleWhen(() -> scroll.value);
 		smoothSpeed.visibleWhen(() -> smooth.value);
 	}

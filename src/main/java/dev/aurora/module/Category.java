@@ -2,7 +2,7 @@ package dev.aurora.module;
 
 public enum Category {
 	COMBAT("Combat"),
-	RENDER("Render"),
+	RENDER("Visuals"),
 	WORLD("World"),
 	UTILITY("Utility"),
 	HUD("HUD"),
