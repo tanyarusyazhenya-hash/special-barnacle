@@ -43,6 +43,12 @@ Note: ore finders, Fullbright and similar tools are banned on many servers. Use 
 - **Orange default theme** (Interface > Theme). The HUD uses the same accent and has an "A" logo badge in the watermark.
 - **AutoTotem** (Utility): keeps a totem in the offhand, with a tick delay, a "swap at health" limit and a hotbar-only option. Off by default; many servers block automation like this.
 
+## Added in v0.5 (Combat tab)
+All three start disabled on every launch, never target friends, and do nothing while Freecam is on. Most servers ban modules like these.
+- **KillAura**: attacks the best target in reach when the attack cooldown is ready. Targets: players, hostile and passive mobs. Priority (distance or health), range, cooldown, rotation (None / Snap / Smooth), weapon-only, line of sight check.
+- **AutoCrystal**: places end crystals on obsidian or bedrock next to the nearest enemy and breaks them. Damage is estimated without armor and without blocks in the way. Min target damage, max self damage, anti-suicide, delays, ranges, auto switch, rotate.
+- **AutoAnchor**: places a respawn anchor next to the nearest enemy, charges it with glowstone and detonates it. Does nothing in the Nether (anchors only set spawn there). Same safety limits as AutoCrystal.
+
 ## Building
 Easiest: generate a 1.21.11 template at https://fabricmc.net/develop (Mojang mappings), then copy `src/` over it
 (merge `fabric.mod.json`). Or use the included Gradle files after updating the versions in `gradle.properties`
