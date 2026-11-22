@@ -12,6 +12,9 @@ public class Nametags extends Module {
 	public final BoolSetting health = add(new BoolSetting("Health", true));
 	public final BoolSetting distance = add(new BoolSetting("Distance", true));
 	public final BoolSetting heldItem = add(new BoolSetting("Held Item", false));
+	public final BoolSetting armor = add(new BoolSetting("Armor", true));
+	public final BoolSetting handItems = add(new BoolSetting("Hand Items + Count", true));
+	public final NumberSetting itemScale = add(new NumberSetting("Item Scale", 0.75, 0.5, 1.5, 0.05));
 	public final BoolSetting background = add(new BoolSetting("Background", true));
 	public final NumberSetting opacity = add(new NumberSetting("Background Opacity", 0.55, 0.0, 1.0, 0.05));
 	public final ModeSetting colorMode = add(new ModeSetting("Name Color", "Health", "Health", "Static", "Accent"));
@@ -23,6 +26,7 @@ public class Nametags extends Module {
 	public Nametags() {
 		super("Nametags", "Name, health and distance above players", Category.RENDER);
 		opacity.visibleWhen(() -> background.value);
+		itemScale.visibleWhen(() -> armor.value || handItems.value);
 		staticColor.visibleWhen(() -> colorMode.is("Static"));
 	}
 }

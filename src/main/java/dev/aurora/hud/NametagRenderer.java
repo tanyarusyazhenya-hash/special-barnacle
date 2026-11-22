@@ -111,10 +111,50 @@ public final class NametagRenderer {
 
 			int y = sYpos - 11;
 			if (nt.heldItem.value && !p.getMainHandItem().isEmpty()) {
-				tag(g, font, nt, "§7" + p.getMainHandItem().getHoverName().getString(), sx, y, 0xFFFFFF);
+				int count = p.getMainHandItem().getCount();
+				tag(g, font, nt, "§7" + p.getMainHandItem().getHoverName().getString()
+					+ (count > 1 ? " §fx" + count : ""), sx, y, 0xFFFFFF);
 				y -= 11;
 			}
 			tag(g, font, nt, sb.toString(), sx, y, nameColor);
+			if (nt.armor.value || nt.handItems.value) {
+				items(g, font, nt, p, sx, y - 2);
+			}
+		}
+	}
+
+	/** Row of item icons (main hand, armor, offhand) above the name; stack counts and durability bars included. */
+	private static void items(GuiGraphics g, Font font, Nametags nt, AbstractClientPlayer p, int cx, int bottom) {
+		java.util.List<net.minecraft.world.item.ItemStack> list = new java.util.ArrayList<>();
+		if (nt.handItems.value) {
+			list.add(p.getMainHandItem());
+		}
+		if (nt.armor.value) {
+			list.add(p.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD));
+			list.add(p.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST));
+			list.add(p.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS));
+			list.add(p.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET));
+		}
+		if (nt.handItems.value) {
+			list.add(p.getOffhandItem());
+		}
+		list.removeIf(net.minecraft.world.item.ItemStack::isEmpty);
+		if (list.isEmpty()) {
+			return;
+		}
+		float s = (float) nt.itemScale.value;
+		int cell = Math.round(16 * s) + 2;
+		int total = list.size() * cell;
+		int x0 = cx - total / 2;
+		int top = bottom - Math.round(16 * s) - 1;
+		for (int i = 0; i < list.size(); i++) {
+			net.minecraft.world.item.ItemStack st = list.get(i);
+			g.pose().pushMatrix();
+			g.pose().translate(x0 + i * cell, top);
+			g.pose().scale(s, s);
+			g.renderItem(st, 0, 0);
+			g.renderItemDecorations(font, st, 0, 0);
+			g.pose().popMatrix();
 		}
 	}
 

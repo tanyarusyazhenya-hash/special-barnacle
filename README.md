@@ -46,7 +46,7 @@ Note: ore finders, Fullbright and similar tools are banned on many servers. Use 
 ## Added in v0.5 (Combat tab)
 All three start disabled on every launch, never target friends, and do nothing while Freecam is on. Most servers ban modules like these.
 - **KillAura**: attacks the best target in reach when the attack cooldown is ready. Targets: players, hostile and passive mobs. Priority (distance or health), range, cooldown, rotation (None / Snap / Smooth), weapon-only, line of sight check.
-- **AutoCrystal**: places end crystals on obsidian or bedrock next to the nearest enemy and breaks them. Damage is estimated without armor and without blocks in the way. Min target damage, max self damage, anti-suicide, delays, ranges, auto switch, rotate.
+- **AutoCrystal**: places end crystals on obsidian or bedrock next to the nearest enemy and breaks them. Damage is estimated with the game's formula (cover, armor, Blast Protection, difficulty; totems not counted). The module list in the HUD shows its status or why it is idle. Option to target hostile mobs. Min target damage, max self damage, anti-suicide, delays, ranges, auto switch, rotate.
 - **AutoAnchor**: places a respawn anchor next to the nearest enemy, charges it with glowstone and detonates it. Does nothing in the Nether (anchors only set spawn there). Same safety limits as AutoCrystal.
 
 ## Welcome text
