@@ -38,6 +38,11 @@ Note: ore finders, Fullbright and similar tools are banned on many servers. Use 
 - **Zoom** (moved here): Hold or Toggle bind mode, mouse wheel changes the zoom while active, smooth easing. Vanilla limits FOV to 30 at minimum.
 - Modules with a "Hold" bind mode are active only while the key is down.
 
+## Added in v0.4
+- **New ClickGUI** (matches the reference): one window with an orange glow, title bar (minimize and close), category sidebar, a card with the modules of the category and a card with the settings of the selected module. Pill toggles, dropdowns, sliders, color picker, key binds. Left click a module to toggle it, right click to only open its settings. Drag the title bar to move the window.
+- **Orange default theme** (Interface > Theme). The HUD uses the same accent and has an "A" logo badge in the watermark.
+- **AutoTotem** (Utility): keeps a totem in the offhand, with a tick delay, a "swap at health" limit and a hotbar-only option. Off by default; many servers block automation like this.
+
 ## Building
 Easiest: generate a 1.21.11 template at https://fabricmc.net/develop (Mojang mappings), then copy `src/` over it
 (merge `fabric.mod.json`). Or use the included Gradle files after updating the versions in `gradle.properties`
