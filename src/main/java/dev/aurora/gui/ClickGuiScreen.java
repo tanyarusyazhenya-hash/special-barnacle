@@ -286,6 +286,12 @@ public class ClickGuiScreen extends Screen {
 	private void icon(GuiGraphics g, Category cat, int ix, int iy, int rgb) {
 		int col = c(rgb, 1f);
 		switch (cat) {
+			case COMBAT -> { // crossed swords
+				for (int i = 0; i < 10; i++) {
+					g.fill(ix + i, iy + i, ix + i + 2, iy + i + 1, col);
+					g.fill(ix + 8 - i, iy + i, ix + 10 - i, iy + i + 1, col);
+				}
+			}
 			case RENDER -> { // monitor
 				outline(g, ix, iy, 10, 7, col);
 				g.fill(ix + 4, iy + 7, ix + 6, iy + 9, col);

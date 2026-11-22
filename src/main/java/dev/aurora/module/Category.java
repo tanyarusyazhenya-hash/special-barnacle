@@ -1,6 +1,7 @@
 package dev.aurora.module;
 
 public enum Category {
+	COMBAT("Combat"),
 	RENDER("Render"),
 	WORLD("World"),
 	UTILITY("Utility"),
