@@ -49,6 +49,9 @@ All three start disabled on every launch, never target friends, and do nothing w
 - **AutoCrystal**: places end crystals on obsidian or bedrock next to the nearest enemy and breaks them. Damage is estimated without armor and without blocks in the way. Min target damage, max self damage, anti-suicide, delays, ranges, auto switch, rotate.
 - **AutoAnchor**: places a respawn anchor next to the nearest enemy, charges it with glowstone and detonates it. Does nothing in the Nether (anchors only set spawn there). Same safety limits as AutoCrystal.
 
+## Welcome text
+Opening the ClickGUI shows "Здравствуй" at the top with "Создатель: winidy" under it. Turn it off with Interface > Welcome Text.
+
 ## Building
 Easiest: generate a 1.21.11 template at https://fabricmc.net/develop (Mojang mappings), then copy `src/` over it
 (merge `fabric.mod.json`). Or use the included Gradle files after updating the versions in `gradle.properties`

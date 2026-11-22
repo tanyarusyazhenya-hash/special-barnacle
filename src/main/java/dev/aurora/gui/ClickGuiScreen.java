@@ -22,6 +22,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import org.lwjgl.glfw.GLFW;
 
@@ -122,6 +123,17 @@ public class ClickGuiScreen extends Screen {
 			g.fill(0, 0, width, height, ColorUtil.argb(0x000000, ui.dimOpacity.f() * alpha));
 		}
 
+		// greeting and credit at the top of the screen (drawn first, so the window covers them if it overlaps)
+		if (ui.greeting.value) {
+			int slide = Math.round((1f - alpha) * -10f);
+			Component hello = Component.literal("Здравствуй").withStyle(ChatFormatting.BOLD);
+			centeredScaled(g, font, hello, width / 2, 10 + slide, 2f, c(0xFFFFFF, 1f));
+			g.fill(width / 2 - 36, 29 + slide, width / 2 + 36, 30 + slide, c(accent, 0.9f));
+			Component credit = Component.literal("Создатель: ")
+				.append(Component.literal("winidy").withStyle(Style.EMPTY.withColor(accent)));
+			centeredScaled(g, font, credit, width / 2, 35 + slide, 1f, c(0x9A9AA4, 1f));
+		}
+
 		winW = Mth.clamp((int) (width * 0.8), 400, 620);
 		winH = Mth.clamp((int) (height * 0.8), 240, 360);
 		if (winX == Integer.MIN_VALUE) {
@@ -166,6 +178,15 @@ public class ClickGuiScreen extends Screen {
 			clipTop = prevTop;
 			clipBottom = prevBottom;
 		}
+	}
+
+	private void centeredScaled(GuiGraphics g, Font font, Component text, int cx, int y, float scale, int color) {
+		int w = font.width(text);
+		g.pose().pushMatrix();
+		g.pose().translate(cx, y);
+		g.pose().scale(scale, scale);
+		g.drawString(font, text, -w / 2, 0, color, true);
+		g.pose().popMatrix();
 	}
 
 	private void renderTitleBar(GuiGraphics g, Font font, int mx, int my, int accent) {
