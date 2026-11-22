@@ -30,6 +30,14 @@ All three ESP modules share: Mode (Outline / Filled / Both / Corners), Outline O
 
 Note: ore finders, Fullbright and similar tools are banned on many servers. Use them only where allowed.
 
+## Added in v0.3 (Utility tab)
+- **Freecam**: a client-side camera flies around while your character stays still (no rotation is sent to the server). WASD, Space/Shift for up/down, Sprint for x2. Turns off on damage, death or leaving the world. Clicks still aim from the camera.
+- **AutoSprint**: holds sprint while walking forward (stops when hungry or using an item).
+- **AutoReconnect**: after a disconnect, counts down and reconnects to the last server, retrying up to the attempt limit. Esc cancels.
+- **Friends**: `/friend add|remove|list|clear <name>` or the "Add Nearest Player" button. Friends are recolored (with a [F] tag) or hidden in PlayerESP, Nametags and Tracers.
+- **Zoom** (moved here): Hold or Toggle bind mode, mouse wheel changes the zoom while active, smooth easing. Vanilla limits FOV to 30 at minimum.
+- Modules with a "Hold" bind mode are active only while the key is down.
+
 ## Building
 Easiest: generate a 1.21.11 template at https://fabricmc.net/develop (Mojang mappings), then copy `src/` over it
 (merge `fabric.mod.json`). Or use the included Gradle files after updating the versions in `gradle.properties`
