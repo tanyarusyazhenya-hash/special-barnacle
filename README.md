@@ -62,3 +62,8 @@ and adding a Gradle wrapper (`gradle wrapper`). Requires Java 21.
 - **TargetHUD** (HUD tab): card with head, name, smooth health bar and armor/hand items of the entity under your crosshair (or the nearest player), lingers a few seconds.
 - **ClickPearl** (Combat): bind it to a key; throws a pearl instantly and switches back.
 - **AutoTotem** moved to Combat. The Render tab is now **Visuals** and also holds Fullbright and Zoom.
+
+## Added in v0.7
+- **Predictions** (Visuals): trajectory and landing marker for the item in your hand (pearl, snowball, egg, potions, XP bottle, trident, bow/crossbow) and for projectiles already flying.
+- **Groups**: `/group invite <player>` (group "team"), `/group add|remove <group> <player>`, `/group delete <group>`, `/group list`, plus "Add Nearest To Team" in Friends. Group members count as friends: KillAura/AutoCrystal/AutoAnchor never target them and ESP recolors them. Groups are local to your client (`config/aurora_groups.json`); other players are not notified.
+- **KillAura presets** (Legit / Strict / Grim / Custom): limited FOV, aim at a drifting point in the hitbox with noise and mouse-sensitivity steps, attacks only when the crosshair is on the hitbox, random timing and rare missed swings. Not tested against any anti-cheat; it is not undetectable.

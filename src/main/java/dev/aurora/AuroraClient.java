@@ -82,14 +82,14 @@ public class AuroraClient implements ClientModInitializer {
 		}
 		List<EspBox> boxes = new ArrayList<>();
 		List<EspLine> lines = new ArrayList<>();
-		ModuleManager.collectEsp(boxes);
 		Vec3 camera = context.worldState().cameraRenderState.pos;
-		if (ModuleManager.tracers.isEnabled()) {
+		{
 			float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
 			Entity viewer = mc.getCameraEntity() != null ? mc.getCameraEntity() : mc.player;
 			Vec3 start = camera.add(viewer.getViewVector(partial).scale(0.6));
 			ModuleManager.collectLines(lines, start);
 		}
+		ModuleManager.collectEsp(boxes);
 		if (boxes.isEmpty() && lines.isEmpty()) {
 			return;
 		}

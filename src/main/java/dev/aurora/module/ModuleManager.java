@@ -13,6 +13,7 @@ import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.AutoTotem;
 import dev.aurora.module.impl.ClickPearl;
+import dev.aurora.module.impl.Predictions;
 import dev.aurora.module.impl.TargetHud;
 import dev.aurora.module.impl.BlockFinder;
 import dev.aurora.module.impl.EntityESP;
@@ -58,6 +59,7 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static Predictions predictions;
 	public static TargetHud targetHud;
 	public static ClickPearl clickPearl;
 	public static Freecam freecam;
@@ -84,6 +86,7 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		predictions = new Predictions();
 		targetHud = new TargetHud();
 		clickPearl = new ClickPearl();
 		freecam = new Freecam();
@@ -103,6 +106,7 @@ public final class ModuleManager {
 		MODULES.add(entityEsp);
 		MODULES.add(blockFinder);
 		MODULES.add(tracers);
+		MODULES.add(predictions);
 		MODULES.add(nametags);
 		MODULES.add(waypoints);
 		MODULES.add(fullbright);
