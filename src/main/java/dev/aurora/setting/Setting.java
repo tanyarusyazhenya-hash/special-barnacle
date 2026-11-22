@@ -21,6 +21,11 @@ public abstract class Setting {
 		return visible.getAsBoolean();
 	}
 
+	/** Buttons and similar settings have nothing to store in the config. */
+	public boolean persistent() {
+		return true;
+	}
+
 	public abstract JsonElement save();
 
 	public abstract void load(JsonElement element);

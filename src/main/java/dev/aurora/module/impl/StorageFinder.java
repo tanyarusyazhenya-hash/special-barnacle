@@ -5,6 +5,8 @@ import dev.aurora.module.Module;
 import dev.aurora.render.EspBox;
 import dev.aurora.render.EspProvider;
 import dev.aurora.render.EspStyle;
+import dev.aurora.render.TracerSource;
+import dev.aurora.render.TracerTarget;
 import dev.aurora.setting.BoolSetting;
 import dev.aurora.setting.ColorSetting;
 import dev.aurora.setting.NumberSetting;
@@ -30,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.List;
 
-public class StorageFinder extends Module implements EspProvider {
+public class StorageFinder extends Module implements EspProvider, TracerSource {
 	private record Target(AABB box, int rgb, double distSq) {}
 
 	// Which containers to show
@@ -184,6 +186,13 @@ public class StorageFinder extends Module implements EspProvider {
 	private static AABB chestBox(BlockPos p) {
 		double x = p.getX(), y = p.getY(), z = p.getZ();
 		return new AABB(x + 0.0625, y, z + 0.0625, x + 0.9375, y + 0.875, z + 0.9375).inflate(0.002);
+	}
+
+	@Override
+	public void tracerTargets(List<TracerTarget> out) {
+		for (Target t : targets) {
+			out.add(new TracerTarget(t.box().getCenter(), t.rgb()));
+		}
 	}
 
 	@Override

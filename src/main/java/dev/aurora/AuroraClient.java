@@ -3,8 +3,10 @@ package dev.aurora;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.aurora.gui.ClickGuiScreen;
 import dev.aurora.hud.HudRenderer;
+import dev.aurora.hud.NametagRenderer;
 import dev.aurora.module.ModuleManager;
 import dev.aurora.render.EspBox;
+import dev.aurora.render.EspLine;
 import dev.aurora.render.EspRenderer;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -53,10 +55,13 @@ public class AuroraClient implements ClientModInitializer {
 		HudElementRegistry.attachElementAfter(
 			VanillaHudElements.MISC_OVERLAYS,
 			Identifier.fromNamespaceAndPath(MOD_ID, "hud"),
-			(graphics, tickCounter) -> HudRenderer.render(graphics));
+			(graphics, tickCounter) -> {
+				HudRenderer.render(graphics);
+				NametagRenderer.render(graphics);
+			});
 
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
-			ModuleManager.save();
+			ModuleManager.shutdown();
 			EspRenderer.close();
 		});
 	}
@@ -67,11 +72,17 @@ public class AuroraClient implements ClientModInitializer {
 			return;
 		}
 		List<EspBox> boxes = new ArrayList<>();
+		List<EspLine> lines = new ArrayList<>();
 		ModuleManager.collectEsp(boxes);
-		if (boxes.isEmpty()) {
+		Vec3 camera = context.worldState().cameraRenderState.pos;
+		if (ModuleManager.tracers.isEnabled()) {
+			float partial = mc.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+			Vec3 start = camera.add(mc.player.getViewVector(partial).scale(0.6));
+			ModuleManager.collectLines(lines, start);
+		}
+		if (boxes.isEmpty() && lines.isEmpty()) {
 			return;
 		}
-		Vec3 camera = context.worldState().cameraRenderState.pos;
-		EspRenderer.render(context.matrices(), camera, boxes);
+		EspRenderer.render(context.matrices(), camera, boxes, lines);
 	}
 }

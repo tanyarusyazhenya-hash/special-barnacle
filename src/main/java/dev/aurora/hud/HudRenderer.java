@@ -3,6 +3,7 @@ package dev.aurora.hud;
 import dev.aurora.module.Module;
 import dev.aurora.module.ModuleManager;
 import dev.aurora.module.impl.HudModule;
+import dev.aurora.module.impl.Waypoints;
 import dev.aurora.util.ColorUtil;
 import dev.aurora.util.GuiUtil;
 import net.minecraft.client.Minecraft;
@@ -10,15 +11,21 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-/** Draws the watermark, the enabled-module list and the info stack. */
+/** Draws the watermark, module list, info stack, armor row and the left-side panels. */
 public final class HudRenderer {
 	private static final int ROW_H = 11;
 	private static final int BG = 0x0B0B10;
@@ -95,6 +102,12 @@ public final class HudRenderer {
 			String facing = Character.toUpperCase(n.charAt(0)) + n.substring(1);
 			lines.add(String.format(Locale.ROOT, "Facing §7%s (%.0f)", facing, Mth.wrapDegrees(mc.player.getYRot())));
 		}
+		if (h.session.value) {
+			lines.add("Session §7" + clock((System.currentTimeMillis() - h.sessionStart) / 1000L));
+		}
+		if (h.totems.value) {
+			lines.add("Totems §7" + countItem(mc, Items.TOTEM_OF_UNDYING));
+		}
 		if (!lines.isEmpty()) {
 			boolean right = h.infoSide.is("Right");
 			int y = gh - 4 - lines.size() * (ROW_H + 1) + 1;
@@ -104,6 +117,81 @@ public final class HudRenderer {
 				y += ROW_H + 1;
 			}
 		}
+
+		// Armor row (top-center)
+		if (h.armor.value) {
+			EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+			int x0 = gw / 2 - 36;
+			for (int i = 0; i < slots.length; i++) {
+				ItemStack stack = mc.player.getItemBySlot(slots[i]);
+				if (stack.isEmpty()) {
+					continue;
+				}
+				int ix = x0 + i * 18;
+				g.renderItem(stack, ix, 4);
+				g.renderItemDecorations(font, stack, ix, 4);
+				if (stack.isDamageableItem() && stack.getMaxDamage() > 0) {
+					int pct = 100 - stack.getDamageValue() * 100 / stack.getMaxDamage();
+					String s = pct + "%";
+					int color = ColorUtil.hsb(Mth.clamp(pct / 100f, 0f, 1f) * 0.33f, 0.8f, 1f);
+					g.drawString(font, s, ix + 8 - font.width(s) / 2, 22, 0xFF000000 | color, h.shadow.value);
+				}
+			}
+		}
+
+		// Left-middle panels: potion effects, nearby players, waypoints
+		List<String> left = new ArrayList<>();
+		if (h.effects.value) {
+			for (MobEffectInstance e : mc.player.getActiveEffects()) {
+				String name = e.getEffect().value().getDisplayName().getString();
+				int amp = e.getAmplifier() + 1;
+				String time = e.isInfiniteDuration() ? "inf" : clock(e.getDuration() / 20L);
+				left.add(name + (amp > 1 ? " " + amp : "") + " §7" + time);
+			}
+		}
+		if (h.nearby.value) {
+			List<AbstractClientPlayer> others = new ArrayList<>();
+			for (AbstractClientPlayer p : mc.level.players()) {
+				if (p != mc.player && !p.isSpectator()) {
+					others.add(p);
+				}
+			}
+			others.sort(Comparator.comparingDouble(p -> mc.player.distanceToSqr(p)));
+			for (int i = 0; i < Math.min(6, others.size()); i++) {
+				AbstractClientPlayer p = others.get(i);
+				left.add(p.getName().getString() + " §7" + (int) mc.player.distanceTo(p) + "m");
+			}
+		}
+		if (h.waypointList.value && ModuleManager.waypoints.isEnabled()) {
+			double px = mc.player.getX(), py = mc.player.getY(), pz = mc.player.getZ();
+			for (Waypoints.Waypoint w : ModuleManager.waypoints.nearest(mc, h.waypointCount.i())) {
+				int dist = (int) Math.sqrt(Waypoints.distSq(w, px, py, pz));
+				left.add(w.type() + " §7" + dist + "m  " + w.x() + " " + w.y() + " " + w.z());
+			}
+		}
+		int ly = Math.max(topLeftY + 4, gh / 2 - left.size() * (ROW_H + 1) / 2);
+		int li = 0;
+		for (String line : left) {
+			drawRow(g, font, h, line, false, gw, ly, colorFor(h, accent, li++));
+			ly += ROW_H + 1;
+		}
+	}
+
+	private static int countItem(Minecraft mc, net.minecraft.world.item.Item item) {
+		Inventory inv = mc.player.getInventory();
+		int count = 0;
+		for (int i = 0; i < inv.getContainerSize(); i++) {
+			ItemStack s = inv.getItem(i);
+			if (s.is(item)) {
+				count += s.getCount();
+			}
+		}
+		return count;
+	}
+
+	private static String clock(long totalSeconds) {
+		long h = totalSeconds / 3600, m = (totalSeconds / 60) % 60, s = totalSeconds % 60;
+		return h > 0 ? String.format(Locale.ROOT, "%d:%02d:%02d", h, m, s) : String.format(Locale.ROOT, "%d:%02d", m, s);
 	}
 
 	private static void drawRow(GuiGraphics g, Font font, HudModule h, String label, boolean right, int gw, int y, int rgb) {

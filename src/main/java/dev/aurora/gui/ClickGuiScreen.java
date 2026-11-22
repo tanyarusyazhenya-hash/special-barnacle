@@ -1,9 +1,12 @@
 package dev.aurora.gui;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.aurora.module.Category;
 import dev.aurora.module.Module;
 import dev.aurora.module.ModuleManager;
 import dev.aurora.module.impl.InterfaceModule;
+import dev.aurora.setting.ActionSetting;
+import dev.aurora.setting.BindSetting;
 import dev.aurora.setting.BoolSetting;
 import dev.aurora.setting.ColorSetting;
 import dev.aurora.setting.ModeSetting;
@@ -75,6 +78,7 @@ public class ClickGuiScreen extends Screen {
 	private float alpha = 0f;
 	private int clipTop, clipBottom;
 	private Module hoveredModule;
+	private BindSetting listening;
 
 	public ClickGuiScreen() {
 		super(Component.literal("Aurora"));
@@ -93,6 +97,10 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public void removed() {
+		if (listening != null) {
+			listening.listening = false;
+			listening = null;
+		}
 		ModuleManager.save();
 		super.removed();
 	}
@@ -314,6 +322,34 @@ public class ClickGuiScreen extends Screen {
 					ms.prev();
 				}
 			});
+		} else if (s instanceof BindSetting bs) {
+			g.drawString(font, "Bind", lx, y + 5, c(labelColor, 1f), false);
+			String v = bs.listening ? "..." : keyName(bs.key);
+			int vw = font.width(v);
+			rrect(g, rx - vw - 6, y + 2, vw + 6, 13, 3, c(bs.listening ? ColorUtil.scale(accent, 0.5f) : 0x1E1E2A, 1f));
+			g.drawString(font, v, rx - vw - 3, y + 5, c(bs.listening ? 0xFFFFFF : accent, 1f), false);
+			addRegion(x, y, W, h, (cx, cy, button) -> {
+				if (button == 0) {
+					boolean now = !bs.listening;
+					if (listening != null) {
+						listening.listening = false;
+					}
+					bs.listening = now;
+					listening = now ? bs : null;
+				} else if (button == 1) {
+					bs.key = -1;
+					bs.listening = false;
+					listening = null;
+				}
+			});
+		} else if (s instanceof ActionSetting act) {
+			rrect(g, lx - 2, y + 2, rx - lx + 4, 13, 3, c(0x1E1E2A, 1f));
+			g.drawString(font, act.name, x + (W - font.width(act.name)) / 2, y + 5, c(accent, 1f), false);
+			addRegion(x, y, W, h, (cx, cy, button) -> {
+				if (button == 0) {
+					act.run();
+				}
+			});
 		} else if (s instanceof ColorSetting cs) {
 			cs.anim += ((cs.open ? 1f : 0f) - cs.anim) * 0.25f;
 			g.drawString(font, cs.name, lx, y + 5, c(labelColor, 1f), false);
@@ -370,6 +406,13 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	// ------------------------------------------------------------------ helpers
+
+	private static String keyName(int key) {
+		if (key < 0) {
+			return "None";
+		}
+		return InputConstants.Type.KEYSYM.getOrCreate(key).getDisplayName().getString();
+	}
 
 	private void addRegion(int x, int y, int w, int h, Click click) {
 		regions.add(new Region(x, y, w, h, clipTop, clipBottom, click));
@@ -461,6 +504,13 @@ public class ClickGuiScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (listening != null) {
+			listening.key = event.key() == GLFW.GLFW_KEY_ESCAPE ? -1 : event.key();
+			listening.listening = false;
+			listening = null;
+			ModuleManager.save();
+			return true;
+		}
 		if (event.key() == GLFW.GLFW_KEY_RIGHT_SHIFT) {
 			onClose();
 			return true;

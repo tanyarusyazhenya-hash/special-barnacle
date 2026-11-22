@@ -19,7 +19,16 @@ public class HudModule extends Module {
 	public final BoolSetting coords = add(new BoolSetting("Coordinates", true));
 	public final BoolSetting speed = add(new BoolSetting("Speed", true));
 	public final BoolSetting direction = add(new BoolSetting("Direction", true));
+	public final BoolSetting session = add(new BoolSetting("Session Time", true));
+	public final BoolSetting totems = add(new BoolSetting("Totem Count", true));
 	public final ModeSetting infoSide = add(new ModeSetting("Info Side", "Right", "Right", "Left"));
+
+	// Extra panels
+	public final BoolSetting armor = add(new BoolSetting("Armor", true));
+	public final BoolSetting effects = add(new BoolSetting("Potion Effects", true));
+	public final BoolSetting nearby = add(new BoolSetting("Nearby Players", true));
+	public final BoolSetting waypointList = add(new BoolSetting("Waypoint List", true));
+	public final NumberSetting waypointCount = add(new NumberSetting("Waypoints Shown", 4, 1, 10, 1));
 
 	// Look
 	public final ModeSetting colorMode = add(new ModeSetting("Color Mode", "Accent", "Accent", "Rainbow", "White"));
@@ -27,6 +36,8 @@ public class HudModule extends Module {
 	public final NumberSetting bgOpacity = add(new NumberSetting("Background Opacity", 0.45, 0.0, 1.0, 0.05));
 	public final BoolSetting accentBar = add(new BoolSetting("Accent Bar", true));
 	public final BoolSetting shadow = add(new BoolSetting("Text Shadow", true));
+
+	public final long sessionStart = System.currentTimeMillis();
 
 	private double lastX, lastZ;
 	private boolean hasLast;
@@ -38,6 +49,7 @@ public class HudModule extends Module {
 		setEnabled(true);
 		listInfo.visibleWhen(() -> moduleList.value);
 		listSide.visibleWhen(() -> moduleList.value);
+		waypointCount.visibleWhen(() -> waypointList.value);
 		bgOpacity.visibleWhen(() -> background.value);
 	}
 

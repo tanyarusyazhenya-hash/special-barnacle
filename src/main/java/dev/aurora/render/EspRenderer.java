@@ -54,12 +54,12 @@ public final class EspRenderer {
 
 	private EspRenderer() {}
 
-	public static void render(PoseStack stack, Vec3 cam, List<EspBox> boxes) {
+	public static void render(PoseStack stack, Vec3 cam, List<EspBox> boxes, List<EspLine> lines) {
 		// Vertices are written camera-relative (computed in double, then cast) so there is no
 		// float jitter far from the origin. The pose already carries the camera rotation.
 		Matrix4f m = stack.last().pose();
-		drawPass(PIPE_DEPTH, m, cam, boxes, false);
-		drawPass(PIPE_WALLS, m, cam, boxes, true);
+		drawPass(PIPE_DEPTH, m, cam, boxes, lines, false);
+		drawPass(PIPE_WALLS, m, cam, boxes, lines, true);
 	}
 
 	public static void close() {
@@ -70,7 +70,8 @@ public final class EspRenderer {
 		ALLOCATOR.close();
 	}
 
-	private static void drawPass(RenderPipeline pipeline, Matrix4f m, Vec3 cam, List<EspBox> boxes, boolean walls) {
+	private static void drawPass(RenderPipeline pipeline, Matrix4f m, Vec3 cam, List<EspBox> boxes, List<EspLine> lines,
+								boolean walls) {
 		BufferBuilder b = null;
 		for (EspBox e : boxes) {
 			if (e.throughWalls() != walls) {
@@ -81,6 +82,15 @@ public final class EspRenderer {
 			}
 			emit(b, m, cam, e);
 		}
+		for (EspLine l : lines) {
+			if (l.throughWalls() != walls) {
+				continue;
+			}
+			if (b == null) {
+				b = new BufferBuilder(ALLOCATOR, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+			}
+			ribbon(b, m, cam, l);
+		}
 		if (b == null) {
 			return;
 		}
@@ -89,6 +99,39 @@ public final class EspRenderer {
 			return;
 		}
 		draw(pipeline, mesh);
+	}
+
+	/** A camera-facing strip between two points, with constant on-screen width. Drawn twice (both windings). */
+	private static void ribbon(BufferBuilder b, Matrix4f m, Vec3 cam, EspLine l) {
+		Vec3 a = l.from().subtract(cam);
+		Vec3 c = l.to().subtract(cam);
+		Vec3 dir = c.subtract(a);
+		if (dir.lengthSqr() < 1e-6) {
+			return;
+		}
+		Vec3 mid = a.add(c).scale(0.5);
+		Vec3 side = dir.cross(mid);
+		if (side.lengthSqr() < 1e-8) {
+			side = dir.cross(new Vec3(0, 1, 0));
+		}
+		if (side.lengthSqr() < 1e-8) {
+			side = dir.cross(new Vec3(1, 0, 0));
+		}
+		side = side.normalize();
+
+		// about 0.0013 world units per pixel per unit of distance at a normal FOV
+		double k = l.thickness() * 0.5 * 0.0013;
+		double wa = Math.max(0.002, a.length() * k);
+		double wc = Math.max(0.002, c.length() * k);
+		int col = ColorUtil.argb(l.rgb(), l.alpha());
+
+		float ax1 = (float) (a.x + side.x * wa), ay1 = (float) (a.y + side.y * wa), az1 = (float) (a.z + side.z * wa);
+		float ax2 = (float) (a.x - side.x * wa), ay2 = (float) (a.y - side.y * wa), az2 = (float) (a.z - side.z * wa);
+		float cx1 = (float) (c.x + side.x * wc), cy1 = (float) (c.y + side.y * wc), cz1 = (float) (c.z + side.z * wc);
+		float cx2 = (float) (c.x - side.x * wc), cy2 = (float) (c.y - side.y * wc), cz2 = (float) (c.z - side.z * wc);
+
+		v(b, m, ax1, ay1, az1, col); v(b, m, ax2, ay2, az2, col); v(b, m, cx2, cy2, cz2, col); v(b, m, cx1, cy1, cz1, col);
+		v(b, m, cx1, cy1, cz1, col); v(b, m, cx2, cy2, cz2, col); v(b, m, ax2, ay2, az2, col); v(b, m, ax1, ay1, az1, col);
 	}
 
 	private static void emit(BufferBuilder b, Matrix4f m, Vec3 cam, EspBox e) {

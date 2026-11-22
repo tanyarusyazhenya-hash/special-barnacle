@@ -5,6 +5,8 @@ import dev.aurora.module.Module;
 import dev.aurora.render.EspBox;
 import dev.aurora.render.EspProvider;
 import dev.aurora.render.EspStyle;
+import dev.aurora.render.TracerSource;
+import dev.aurora.render.TracerTarget;
 import dev.aurora.setting.BoolSetting;
 import dev.aurora.setting.ColorSetting;
 import dev.aurora.setting.NumberSetting;
@@ -25,7 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class SpawnerFinder extends Module implements EspProvider {
+public class SpawnerFinder extends Module implements EspProvider, TracerSource {
 	private record Target(AABB box, int rgb, double distSq) {}
 
 	public final BoolSetting spawners = add(new BoolSetting("Spawners", true));
@@ -132,6 +134,13 @@ public class SpawnerFinder extends Module implements EspProvider {
 		}
 		targets.clear();
 		targets.addAll(found);
+	}
+
+	@Override
+	public void tracerTargets(List<TracerTarget> out) {
+		for (Target t : targets) {
+			out.add(new TracerTarget(t.box().getCenter(), t.rgb()));
+		}
 	}
 
 	@Override

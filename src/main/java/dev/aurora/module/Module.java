@@ -1,5 +1,6 @@
 package dev.aurora.module;
 
+import dev.aurora.setting.BindSetting;
 import dev.aurora.setting.Setting;
 import net.minecraft.client.Minecraft;
 
@@ -11,6 +12,10 @@ public abstract class Module {
 	public final String description;
 	public final Category category;
 	public final List<Setting> settings = new ArrayList<>();
+
+	/** Toggle key. Added to the settings list by ModuleManager for modules that can be toggled. */
+	public final BindSetting bind = new BindSetting();
+	public boolean keyWasDown;
 
 	private boolean enabled;
 
@@ -32,6 +37,11 @@ public abstract class Module {
 
 	/** Modules like Interface are always on and only expose settings. */
 	public boolean hasToggle() {
+		return true;
+	}
+
+	/** Modules with temporary side effects (like Zoom) should start disabled every launch. */
+	public boolean persistEnabled() {
 		return true;
 	}
 
