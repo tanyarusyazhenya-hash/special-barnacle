@@ -29,6 +29,12 @@ public class ModeSetting extends Setting {
 		return modes[index].equals(mode);
 	}
 
+	public void set(int i) {
+		if (i >= 0 && i < modes.length) {
+			index = i;
+		}
+	}
+
 	public void next() {
 		index = (index + 1) % modes.length;
 	}

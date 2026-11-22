@@ -6,7 +6,9 @@ import dev.aurora.module.impl.HudModule;
 import dev.aurora.module.impl.Waypoints;
 import dev.aurora.util.ColorUtil;
 import dev.aurora.util.GuiUtil;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -46,16 +48,18 @@ public final class HudRenderer {
 		// Watermark (top-left)
 		int topLeftY = 4;
 		if (h.watermark.value) {
-			String name = "Aurora";
+			String name = "aurora";
 			String version = " §71.21.11";
-			int bw = font.width(name) + font.width(version) + 10;
+			int bw = font.width(name) + font.width(version) + 30;
 			if (h.background.value) {
 				GuiUtil.rrect(g, 4, 4, bw, 14, 3, ColorUtil.argb(BG, h.bgOpacity.f()));
 			}
 			if (h.accentBar.value) {
-				g.fill(4, 6, 6, 16, ColorUtil.argb(colorFor(h, accent, 0), 1f));
+				// logo badge: accent square with a bold dark "A"
+				GuiUtil.rrect(g, 7, 6, 12, 12, 3, ColorUtil.argb(colorFor(h, accent, 0), 1f));
+				g.drawString(font, Component.literal("A").withStyle(ChatFormatting.BOLD), 10, 8, 0xFF0C0C0E, false);
 			}
-			text(g, font, h, name + version, 10, 8, colorFor(h, accent, 0));
+			text(g, font, h, name + version, h.accentBar.value ? 24 : 10, 8, colorFor(h, accent, 0));
 			topLeftY = 22;
 		}
 

@@ -8,6 +8,7 @@ import com.google.gson.JsonParser;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
+import dev.aurora.module.impl.AutoTotem;
 import dev.aurora.module.impl.BlockFinder;
 import dev.aurora.module.impl.EntityESP;
 import dev.aurora.module.impl.Freecam;
@@ -54,6 +55,7 @@ public final class ModuleManager {
 	public static Zoom zoom;
 	public static Freecam freecam;
 	public static AutoSprint autoSprint;
+	public static AutoTotem autoTotem;
 	public static AutoReconnect autoReconnect;
 	public static Friends friends;
 	public static HudModule hud;
@@ -74,6 +76,7 @@ public final class ModuleManager {
 		zoom = new Zoom();
 		freecam = new Freecam();
 		autoSprint = new AutoSprint();
+		autoTotem = new AutoTotem();
 		autoReconnect = new AutoReconnect();
 		friends = new Friends();
 		hud = new HudModule();
@@ -91,6 +94,7 @@ public final class ModuleManager {
 		MODULES.add(zoom);
 		MODULES.add(freecam);
 		MODULES.add(autoSprint);
+		MODULES.add(autoTotem);
 		MODULES.add(autoReconnect);
 		MODULES.add(friends);
 		MODULES.add(hud);

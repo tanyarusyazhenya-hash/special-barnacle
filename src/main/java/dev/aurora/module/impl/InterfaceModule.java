@@ -13,6 +13,7 @@ import dev.aurora.util.ColorUtil;
 /** Always-on module: ClickGUI look (themes) and config profiles. */
 public class InterfaceModule extends Module {
 	private static final int[] THEME_COLORS = {
+		0xFF7A1A, // Orange
 		0x8B5CF6, // Purple
 		0x38BDF8, // Ocean
 		0x34D399, // Emerald
@@ -21,9 +22,9 @@ public class InterfaceModule extends Module {
 		0xF472B6  // Rose
 	};
 
-	public final ModeSetting theme = add(new ModeSetting("Theme", "Purple",
-		"Custom", "Purple", "Ocean", "Emerald", "Ruby", "Gold", "Rose"));
-	public final ColorSetting accentColor = add(new ColorSetting("Custom Accent", 0x8B5CF6));
+	public final ModeSetting theme = add(new ModeSetting("Theme", "Orange",
+		"Custom", "Orange", "Purple", "Ocean", "Emerald", "Ruby", "Gold", "Rose"));
+	public final ColorSetting accentColor = add(new ColorSetting("Custom Accent", 0xFF7A1A));
 	public final BoolSetting rainbow = add(new BoolSetting("Rainbow Accent", false));
 	public final BoolSetting dim = add(new BoolSetting("Dim Background", true));
 	public final NumberSetting dimOpacity = add(new NumberSetting("Dim Opacity", 0.45, 0.0, 0.9, 0.05));
