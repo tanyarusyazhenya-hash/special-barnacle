@@ -43,6 +43,7 @@ public class MaceAura extends Module {
 	public final BoolSetting autoSwitch = add(new BoolSetting("Auto Switch Items", true));
 	public final NumberSetting turnSpeed = add(new NumberSetting("Turn Speed", 45, 10, 180, 5));
 	public final NumberSetting aimNoise = add(new NumberSetting("Aim Noise (deg)", 0.5, 0.0, 3.0, 0.1));
+	public final BoolSetting groundAttack = add(new BoolSetting("Attack On Ground", true));
 	public final BoolSetting requireCrosshair = add(new BoolSetting("Require Crosshair On Hitbox", true));
 	public final BoolSetting randomDelay = add(new BoolSetting("Random Attack Delay", true));
 
@@ -102,6 +103,7 @@ public class MaceAura extends Module {
 		if (grounded) {
 			if (!launch.is("Wind Charge")) {
 				status = "Waiting to fall";
+				groundHit(mc, p, target);
 				return;
 			}
 			if (CombatUtil.reach(p, target) > launchRange.value) {
@@ -114,6 +116,7 @@ public class MaceAura extends Module {
 			}
 			if (CombatUtil.findHotbar(p, Items.WIND_CHARGE) < 0 && !p.getOffhandItem().is(Items.WIND_CHARGE)) {
 				status = "No wind charges";
+				groundHit(mc, p, target);
 				return;
 			}
 			InteractionHand hand = CombatUtil.holdItem(p, Items.WIND_CHARGE, autoSwitch.value);
@@ -182,5 +185,37 @@ public class MaceAura extends Module {
 		p.swing(InteractionHand.MAIN_HAND);
 		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
 		status = "Smash!";
+	}
+
+	/** Plain mace hit when you are on the ground (no smash bonus, but it still hits). */
+	private void groundHit(Minecraft mc, LocalPlayer p, LivingEntity target) {
+		if (!groundAttack.value || CombatUtil.reach(p, target) > range.value) {
+			return;
+		}
+		if (!p.getMainHandItem().is(Items.MACE)) {
+			int slot = CombatUtil.findHotbar(p, Items.MACE);
+			if (slot < 0 || !autoSwitch.value) {
+				return;
+			}
+			p.getInventory().setSelectedSlot(slot);
+		}
+		ThreadLocalRandom rnd = ThreadLocalRandom.current();
+		float[] rot = CombatUtil.rotationsTo(p.getEyePosition(), target.getBoundingBox().getCenter());
+		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
+		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
+		CombatUtil.turn(p, rot, turnSpeed.f());
+		if (requireCrosshair.value) {
+			Vec3 eye = p.getEyePosition();
+			if (target.getBoundingBox().clip(eye, eye.add(p.getLookAngle().scale(range.value))).isEmpty()) {
+				return;
+			}
+		}
+		if (attackDelay > 0 || p.getAttackStrengthScale(0.5f) < 0.92f) {
+			return;
+		}
+		mc.gameMode.attack(p, target);
+		p.swing(InteractionHand.MAIN_HAND);
+		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
+		status = "Hit";
 	}
 }

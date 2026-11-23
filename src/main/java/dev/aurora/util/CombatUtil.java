@@ -88,6 +88,11 @@ public final class CombatUtil {
 
 	/** Closest non-friend player (and optionally hostile mob) within range, or null. */
 	public static LivingEntity nearestTarget(Minecraft mc, double range, boolean players, boolean hostileMobs) {
+		return nearestTarget(mc, range, players, hostileMobs, false);
+	}
+
+	public static LivingEntity nearestTarget(Minecraft mc, double range, boolean players, boolean hostileMobs,
+											 boolean passiveMobs) {
 		if (mc.player == null || mc.level == null) {
 			return null;
 		}
@@ -103,6 +108,10 @@ public final class CombatUtil {
 				}
 			} else if (le instanceof Enemy) {
 				if (!hostileMobs) {
+					continue;
+				}
+			} else if (le instanceof Mob) {
+				if (!passiveMobs) {
 					continue;
 				}
 			} else {

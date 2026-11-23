@@ -1,5 +1,6 @@
 package dev.aurora.module.impl;
 
+import dev.aurora.hud.Notifications;
 import dev.aurora.module.Category;
 import dev.aurora.module.Module;
 import dev.aurora.module.ModuleManager;
@@ -30,6 +31,8 @@ import net.minecraft.world.phys.Vec3;
  */
 public class AutoAnchor extends Module {
 	public final BoolSetting includeMobs = add(new BoolSetting("Target Hostile Mobs", false));
+	public final BoolSetting includePassive = add(new BoolSetting("Target Passive Mobs (testing)", false));
+	public final BoolSetting statusToasts = add(new BoolSetting("Status Notifications", true));
 	public final NumberSetting targetRange = add(new NumberSetting("Target Range", 8, 3, 12, 1));
 	public final NumberSetting placeRange = add(new NumberSetting("Place Range", 4.5, 2.0, 6.0, 0.5));
 	public final NumberSetting delay = add(new NumberSetting("Delay (ticks)", 2, 0, 10, 1));
@@ -62,7 +65,7 @@ public class AutoAnchor extends Module {
 	@Override
 	protected void onEnable() {
 		timer = 100;
-		status = "Idle";
+		setStatus("Idle");
 	}
 
 	@Override
@@ -72,20 +75,20 @@ public class AutoAnchor extends Module {
 			return;
 		}
 		if (ModuleManager.freecam.isEnabled()) {
-			status = "Freecam is on";
+			setStatus("Freecam is on");
 			return;
 		}
 		if (mc.level.dimension() == Level.NETHER) {
-			status = "Nether: anchors do not explode";
+			setStatus("Nether: anchors do not explode");
 			return;
 		}
 		timer = Math.min(timer + 1, 100);
 		if (timer < delay.i()) {
 			return;
 		}
-		LivingEntity target = CombatUtil.nearestTarget(mc, targetRange.value, true, includeMobs.value);
+		LivingEntity target = CombatUtil.nearestTarget(mc, targetRange.value, true, includeMobs.value, includePassive.value);
 		if (target == null) {
-			status = "No target";
+			setStatus("No target");
 			return;
 		}
 		double selfHp = p.getHealth() + p.getAbsorptionAmount();
@@ -130,7 +133,7 @@ public class AutoAnchor extends Module {
 			return;
 		}
 		if (anyAnchor) {
-			status = "Anchor nearby is unsafe or too weak";
+			setStatus("Anchor nearby is unsafe or too weak");
 			return; // do not stack more anchors
 		}
 
@@ -154,22 +157,22 @@ public class AutoAnchor extends Module {
 		if (charge == 0) {
 			hand = CombatUtil.holdItem(p, Items.GLOWSTONE, autoSwitch.value);
 			if (hand == null) {
-				status = autoSwitch.value ? "No glowstone in hotbar" : "Hold glowstone";
+				setStatus(autoSwitch.value ? "No glowstone in hotbar" : "Hold glowstone");
 				return false;
 			}
-			status = "Charging";
+			setStatus("Charging");
 		} else {
 			// detonate with anything that is not glowstone
 			if (p.getMainHandItem().is(Items.GLOWSTONE)) {
 				int slot = CombatUtil.findHotbarNot(p, Items.GLOWSTONE);
 				if (slot < 0 || !autoSwitch.value) {
-					status = "Hold a non-glowstone item";
+					setStatus("Hold a non-glowstone item");
 					return false;
 				}
 				p.getInventory().setSelectedSlot(slot);
 			}
 			hand = InteractionHand.MAIN_HAND;
-			status = "Detonating";
+			setStatus("Detonating");
 		}
 		look(p, hitVec);
 		mc.gameMode.useItemOn(p, hand, hit);
@@ -240,29 +243,46 @@ public class AutoAnchor extends Module {
 		}
 		if (bestSupport == null) {
 			if (spots == 0) {
-				status = "No free spot next to target in reach";
+				setStatus("No free spot next to target in reach");
 			} else if (weak > 0 && unsafe == 0) {
-				status = "Target too far for damage";
+				setStatus("Target too far for damage");
 			} else {
-				status = "Too dangerous for you";
+				setStatus("Too dangerous for you");
 			}
 			return false;
 		}
 		InteractionHand hand = CombatUtil.holdItem(p, Items.RESPAWN_ANCHOR, autoSwitch.value);
 		if (hand == null) {
-			status = autoSwitch.value ? "No anchors in hotbar" : "Hold an anchor";
+			setStatus(autoSwitch.value ? "No anchors in hotbar" : "Hold an anchor");
 			return false;
 		}
 		look(p, bestHit);
 		mc.gameMode.useItemOn(p, hand, new BlockHitResult(bestHit, bestFace, bestSupport, false));
 		p.swing(hand);
-		status = "Placing";
+		setStatus("Placing");
 		return true;
 	}
 
 	private void look(LocalPlayer p, Vec3 at) {
 		if (rotate.value && !ModuleManager.freecam.isEnabled()) {
 			CombatUtil.turn(p, CombatUtil.rotationsTo(p.getEyePosition(), at), 360f);
+		}
+	}
+
+	private long lastToast;
+
+	/** Remembers what the module is doing and pops a toast when it is stuck on a reason (rate limited). */
+	private void setStatus(String s) {
+		if (s.equals(this.status)) {
+			return;
+		}
+		this.status = s;
+		boolean action = s.equals("Placing") || s.equals("Breaking") || s.equals("Charging")
+			|| s.equals("Detonating") || s.equals("Idle");
+		long now = System.currentTimeMillis();
+		if (statusToasts.value && !action && now - lastToast > 1200) {
+			lastToast = now;
+			Notifications.push(this.name, s, 0xFFB020);
 		}
 	}
 }

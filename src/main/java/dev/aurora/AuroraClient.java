@@ -80,6 +80,7 @@ public class AuroraClient implements ClientModInitializer {
 				HudRenderer.render(graphics);
 				NametagRenderer.render(graphics);
 				dev.aurora.hud.TargetHudRenderer.render(graphics);
+				dev.aurora.hud.RadarRenderer.render(graphics);
 				dev.aurora.hud.Notifications.render(graphics);
 			});
 

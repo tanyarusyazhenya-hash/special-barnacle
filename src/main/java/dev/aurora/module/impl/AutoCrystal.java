@@ -1,5 +1,6 @@
 package dev.aurora.module.impl;
 
+import dev.aurora.hud.Notifications;
 import dev.aurora.module.Category;
 import dev.aurora.module.Module;
 import dev.aurora.module.ModuleManager;
@@ -32,6 +33,8 @@ public class AutoCrystal extends Module {
 	public final BoolSetting place = add(new BoolSetting("Place", true));
 	public final BoolSetting breakCrystals = add(new BoolSetting("Break", true));
 	public final BoolSetting includeMobs = add(new BoolSetting("Target Hostile Mobs", false));
+	public final BoolSetting includePassive = add(new BoolSetting("Target Passive Mobs (testing)", false));
+	public final BoolSetting statusToasts = add(new BoolSetting("Status Notifications", true));
 	public final NumberSetting targetRange = add(new NumberSetting("Target Range", 10, 4, 16, 1));
 	public final NumberSetting placeRange = add(new NumberSetting("Place Range", 4.5, 2.0, 6.0, 0.5));
 	public final NumberSetting breakRange = add(new NumberSetting("Break Range", 4.0, 2.0, 6.0, 0.5));
@@ -73,7 +76,7 @@ public class AutoCrystal extends Module {
 	protected void onEnable() {
 		placeTimer = 100;
 		breakTimer = 100;
-		status = "Idle";
+		setStatus("Idle");
 	}
 
 	@Override
@@ -83,19 +86,19 @@ public class AutoCrystal extends Module {
 			return;
 		}
 		if (ModuleManager.freecam.isEnabled()) {
-			status = "Freecam is on";
+			setStatus("Freecam is on");
 			return;
 		}
 		if (pauseWhileUsing.value && p.isUsingItem()) {
-			status = "Paused (using item)";
+			setStatus("Paused (using item)");
 			return;
 		}
 		placeTimer = Math.min(placeTimer + 1, 100);
 		breakTimer = Math.min(breakTimer + 1, 100);
 
-		LivingEntity target = CombatUtil.nearestTarget(mc, targetRange.value, true, includeMobs.value);
+		LivingEntity target = CombatUtil.nearestTarget(mc, targetRange.value, true, includeMobs.value, includePassive.value);
 		if (target == null) {
-			status = "No target";
+			setStatus("No target");
 			return;
 		}
 		double selfHp = p.getHealth() + p.getAbsorptionAmount();
@@ -132,14 +135,14 @@ public class AutoCrystal extends Module {
 				mc.gameMode.attack(p, best);
 				p.swing(InteractionHand.MAIN_HAND);
 				breakTimer = 0;
-				status = "Breaking";
+				setStatus("Breaking");
 				return;
 			}
 		}
 
 		// 2. place a new crystal
 		if (!place.value) {
-			status = "Waiting for crystals";
+			setStatus("Waiting for crystals");
 			return;
 		}
 		if (placeTimer < placeDelay.i()) {
@@ -148,19 +151,19 @@ public class AutoCrystal extends Module {
 		BlockPos base = findPlacement(mc, p, target, selfHp);
 		if (base == null) {
 			if (bases == 0) {
-				status = "No obsidian or bedrock in range";
+				setStatus("No obsidian or bedrock in range");
 			} else if (weak > 0 && unsafe == 0) {
-				status = "Target too far for damage";
+				setStatus("Target too far for damage");
 			} else if (unsafe > 0) {
-				status = "Too dangerous for you";
+				setStatus("Too dangerous for you");
 			} else {
-				status = "No good spot";
+				setStatus("No good spot");
 			}
 			return;
 		}
 		InteractionHand hand = CombatUtil.holdItem(p, Items.END_CRYSTAL, autoSwitch.value);
 		if (hand == null) {
-			status = autoSwitch.value ? "No crystals in hotbar" : "Hold crystals";
+			setStatus(autoSwitch.value ? "No crystals in hotbar" : "Hold crystals");
 			return;
 		}
 		Vec3 top = new Vec3(base.getX() + 0.5, base.getY() + 1.0, base.getZ() + 0.5);
@@ -173,7 +176,7 @@ public class AutoCrystal extends Module {
 			p.swing(hand);
 		}
 		placeTimer = 0;
-		status = "Placing";
+		setStatus("Placing");
 	}
 
 	private boolean selfSafe(double dmgSelf, double selfHp) {
@@ -234,5 +237,22 @@ public class AutoCrystal extends Module {
 			}
 		}
 		return best;
+	}
+
+	private long lastToast;
+
+	/** Remembers what the module is doing and pops a toast when it is stuck on a reason (rate limited). */
+	private void setStatus(String s) {
+		if (s.equals(this.status)) {
+			return;
+		}
+		this.status = s;
+		boolean action = s.equals("Placing") || s.equals("Breaking") || s.equals("Charging")
+			|| s.equals("Detonating") || s.equals("Idle");
+		long now = System.currentTimeMillis();
+		if (statusToasts.value && !action && now - lastToast > 1200) {
+			lastToast = now;
+			Notifications.push(this.name, s, 0xFFB020);
+		}
 	}
 }
