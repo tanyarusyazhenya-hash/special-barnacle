@@ -74,3 +74,11 @@ and adding a Gradle wrapper (`gradle wrapper`). Requires Java 21.
 - **Custom main menu**: replaces the title screen (Interface > Custom Main Menu). Singleplayer, Multiplayer, Options, Quit and **Accounts**.
 - **Account switcher**: saved offline names (`config/aurora_accounts.json`), click to use. Works on cracked servers and singleplayer only; premium servers need a real login and will refuse these names.
 - **TargetHUD styles**: Classic, Compact, Minimal, Modern, Neon, Ring, Bubble; bar styles Smooth, Segmented, Gradient; health or accent coloring; distance.
+
+## Added in v0.9
+- **Notifications**: slide-in toasts for module on/off, totem pops and deaths (Interface: side, position, time).
+- **Module search**: field in the ClickGUI title bar; click it and type, right click clears.
+- **TriggerBot** (Combat): hits what the crosshair is on with a human-like reaction delay, random charge threshold and rare skipped hits (Legit / Strict / Custom), optional crits only. Not tested against any anti-cheat.
+- **PopCounter** (Combat): counts other players' totem pops (guessed from the totem's Regeneration II + Absorption effects), shows them in chat, toasts and nametags.
+- **TimeChanger** (Visuals): fixed or cycling time of day, client-side only.
+- **CustomCrosshair** (Visuals): Cross, Plus, Dot, Circle, Square, Cross + Dot; size, gap, thickness, outline, colors, enemy color, dynamic gap and an attack cooldown ring.

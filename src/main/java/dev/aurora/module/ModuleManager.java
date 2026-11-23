@@ -13,6 +13,10 @@ import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.AutoTotem;
 import dev.aurora.module.impl.ClickPearl;
+import dev.aurora.module.impl.CustomCrosshair;
+import dev.aurora.module.impl.PopCounter;
+import dev.aurora.module.impl.TimeChanger;
+import dev.aurora.module.impl.TriggerBot;
 import dev.aurora.module.impl.Hitboxes;
 import dev.aurora.module.impl.TargetAura;
 import dev.aurora.module.impl.Predictions;
@@ -61,6 +65,10 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static TriggerBot triggerBot;
+	public static PopCounter popCounter;
+	public static TimeChanger timeChanger;
+	public static CustomCrosshair crosshair;
 	public static TargetAura targetAura;
 	public static Hitboxes hitboxes;
 	public static Predictions predictions;
@@ -90,6 +98,10 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		triggerBot = new TriggerBot();
+		popCounter = new PopCounter();
+		timeChanger = new TimeChanger();
+		crosshair = new CustomCrosshair();
 		targetAura = new TargetAura();
 		hitboxes = new Hitboxes();
 		predictions = new Predictions();
@@ -112,6 +124,8 @@ public final class ModuleManager {
 		MODULES.add(entityEsp);
 		MODULES.add(blockFinder);
 		MODULES.add(tracers);
+		MODULES.add(timeChanger);
+		MODULES.add(crosshair);
 		MODULES.add(hitboxes);
 		MODULES.add(predictions);
 		MODULES.add(nametags);
@@ -122,6 +136,8 @@ public final class ModuleManager {
 		MODULES.add(autoSprint);
 		MODULES.add(autoTotem);
 		MODULES.add(killAura);
+		MODULES.add(triggerBot);
+		MODULES.add(popCounter);
 		MODULES.add(targetAura);
 		MODULES.add(clickPearl);
 		MODULES.add(autoCrystal);
@@ -138,6 +154,10 @@ public final class ModuleManager {
 				m.settings.add(m.bind);
 			}
 		}
+	}
+
+	public static List<Module> all() {
+		return MODULES;
 	}
 
 	public static List<Module> all() {

@@ -29,6 +29,11 @@ public class InterfaceModule extends Module {
 	public final BoolSetting dim = add(new BoolSetting("Dim Background", true));
 	public final NumberSetting dimOpacity = add(new NumberSetting("Dim Opacity", 0.45, 0.0, 0.9, 0.05));
 	public final BoolSetting greeting = add(new BoolSetting("Welcome Text", true));
+	public final BoolSetting notifications = add(new BoolSetting("Notifications", true));
+	public final BoolSetting notifyToggles = add(new BoolSetting("Notify Module Toggles", true));
+	public final ModeSetting notifySide = add(new ModeSetting("Notification Side", "Right", "Right", "Left"));
+	public final ModeSetting notifyPos = add(new ModeSetting("Notification Position", "Bottom", "Bottom", "Top"));
+	public final NumberSetting notifyTime = add(new NumberSetting("Notification Time (s)", 2.5, 1.0, 8.0, 0.5));
 	public final BoolSetting customMenu = add(new BoolSetting("Custom Main Menu", true));
 
 	public final ModeSetting profile = add(new ModeSetting("Profile", "1", "1", "2", "3", "4"));
@@ -40,6 +45,10 @@ public class InterfaceModule extends Module {
 		theme.visibleWhen(() -> !rainbow.value);
 		accentColor.visibleWhen(() -> !rainbow.value && theme.is("Custom"));
 		dimOpacity.visibleWhen(() -> dim.value);
+		notifyToggles.visibleWhen(() -> notifications.value);
+		notifySide.visibleWhen(() -> notifications.value);
+		notifyPos.visibleWhen(() -> notifications.value);
+		notifyTime.visibleWhen(() -> notifications.value);
 		setEnabled(true);
 	}
 

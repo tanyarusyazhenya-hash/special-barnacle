@@ -40,7 +40,7 @@ public class AuroraClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		ModuleManager.init();
 		ModuleManager.load();
-		ClientLifecycleEvents.CLIENT_STARTED.register(mc -> dev.aurora.account.AccountManager.init());
+		ClientLifecycleEvents.CLIENT_STARTED.register(mc -> { dev.aurora.account.AccountManager.init(); dev.aurora.hud.Notifications.ready = true; });
 
 		openGui = KeyBindingHelper.registerKeyBinding(new KeyMapping(
 			"key.aurora.open_gui", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
@@ -64,6 +64,14 @@ public class AuroraClient implements ClientModInitializer {
 			(dispatcher, registryAccess) -> ModuleManager.friends.registerCommands(dispatcher));
 		AutoReconnect.register();
 
+		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, original -> (graphics, tickCounter) -> {
+			if (ModuleManager.crosshair != null && ModuleManager.crosshair.isEnabled()) {
+				dev.aurora.hud.CrosshairRenderer.render(graphics);
+			} else {
+				original.render(graphics, tickCounter);
+			}
+		});
+
 		HudElementRegistry.attachElementAfter(
 			VanillaHudElements.MISC_OVERLAYS,
 			Identifier.fromNamespaceAndPath(MOD_ID, "hud"),
@@ -71,6 +79,7 @@ public class AuroraClient implements ClientModInitializer {
 				HudRenderer.render(graphics);
 				NametagRenderer.render(graphics);
 				dev.aurora.hud.TargetHudRenderer.render(graphics);
+				dev.aurora.hud.Notifications.render(graphics);
 			});
 
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {

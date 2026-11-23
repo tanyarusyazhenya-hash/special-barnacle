@@ -70,6 +70,7 @@ public abstract class Module {
 		}
 		enabled = value;
 		enableAnim = value ? 1f : 0f;
+		dev.aurora.hud.Notifications.moduleToggled(this, value);
 		if (value) {
 			onEnable();
 		} else {

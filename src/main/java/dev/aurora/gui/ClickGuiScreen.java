@@ -19,6 +19,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
@@ -52,6 +53,8 @@ public class ClickGuiScreen extends Screen {
 	private static int winX = Integer.MIN_VALUE;
 	private static int winY = Integer.MIN_VALUE;
 	private static boolean minimized;
+	private final StringBuilder search = new StringBuilder();
+	private boolean searchFocused;
 
 	private interface Drag {
 		void on(double mx, double my);
@@ -226,6 +229,25 @@ public class ClickGuiScreen extends Screen {
 				moveDy = (int) clickY - winY;
 			}
 		});
+		int sx = x0 + 84;
+		int sw = Math.max(60, Math.min(150, bx - 72 - sx - 6));
+		GuiUtil.rrect(g, sx, by, sw, 16, 4, c(searchFocused ? accent : 0xFFFFFF, searchFocused ? 0.6f : 0.12f));
+		GuiUtil.rrect(g, sx + 1, by + 1, sw - 2, 14, 3, c(0x101013, 1f));
+		if (search.length() == 0 && !searchFocused) {
+			g.drawString(font, "Search modules...", sx + 6, by + 4, c(0x6A6A74, 1f), false);
+		} else {
+			boolean caret = searchFocused && (System.currentTimeMillis() / 500) % 2 == 0;
+			g.drawString(font, font.plainSubstrByWidth(search.toString(), sw - 14) + (caret ? "_" : ""), sx + 6,
+				by + 4, c(0xFFFFFF, 1f), false);
+		}
+		addRegion(sx, by, sw, 16, (clickX, clickY, button) -> {
+			if (button == 0) {
+				searchFocused = true;
+			} else if (button == 1) {
+				search.setLength(0);
+				listScroll = 0;
+			}
+		});
 		int gx = bx - 66;
 		boolean hoverGroups = hit(mx, my, gx, by, 60, 16);
 		GuiUtil.rrect(g, gx, by, 60, 16, 4, c(accent, hoverGroups ? 0.35f : 0.18f));
@@ -375,11 +397,23 @@ public class ClickGuiScreen extends Screen {
 		// ---- module list card
 		card(g, lx, cardY, leftW, cardH);
 		icon(g, selected, lx + 10, cardY + 8, accent);
-		String title = selected == Category.CLIENT ? "Settings" : selected.label;
+		boolean searching = search.length() > 0;
+		String title = searching ? "Search" : selected == Category.CLIENT ? "Settings" : selected.label;
 		g.drawString(font, title, lx + 26, cardY + 9, c(0xFFFFFF, 1f), false);
 		g.fill(lx + 8, cardY + 24, lx + leftW - 8, cardY + 25, c(0xFFFFFF, 0.07f));
 
-		List<Module> mods = ModuleManager.byCategory(selected);
+		List<Module> mods;
+		if (searching) {
+			mods = new ArrayList<>();
+			String q = search.toString().toLowerCase();
+			for (Module m : ModuleManager.all()) {
+				if (m.name.toLowerCase().contains(q) || m.description.toLowerCase().contains(q)) {
+					mods.add(m);
+				}
+			}
+		} else {
+			mods = ModuleManager.byCategory(selected);
+		}
 		Module focus = FOCUS.get(selected);
 		if (focus == null || !mods.contains(focus)) {
 			focus = mods.isEmpty() ? null : mods.get(0);
@@ -753,6 +787,7 @@ public class ClickGuiScreen extends Screen {
 		double mx = event.x();
 		double my = event.y();
 		int button = event.button();
+		searchFocused = false;
 		for (int i = regions.size() - 1; i >= 0; i--) {
 			Region r = regions.get(i);
 			if (r.hit(mx, my)) {
@@ -801,6 +836,16 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	@Override
+	public boolean charTyped(CharacterEvent event) {
+		if (searchFocused && search.length() < 24 && event.codepoint() >= 32) {
+			search.appendCodePoint(event.codepoint());
+			listScroll = 0;
+			return true;
+		}
+		return super.charTyped(event);
+	}
+
+	@Override
 	public boolean keyPressed(KeyEvent event) {
 		if (listening != null) {
 			listening.key = event.key() == GLFW.GLFW_KEY_ESCAPE ? -1 : event.key();
@@ -808,6 +853,31 @@ public class ClickGuiScreen extends Screen {
 			listening = null;
 			ModuleManager.save();
 			return true;
+		}
+		if (searchFocused) {
+			int k = event.key();
+			if (k == GLFW.GLFW_KEY_BACKSPACE) {
+				if (search.length() > 0) {
+					search.setLength(search.length() - 1);
+					listScroll = 0;
+				}
+				return true;
+			}
+			if (k == GLFW.GLFW_KEY_ESCAPE) {
+				if (search.length() > 0) {
+					search.setLength(0);
+					listScroll = 0;
+				}
+				searchFocused = false;
+				return true;
+			}
+			if (k == GLFW.GLFW_KEY_ENTER || k == GLFW.GLFW_KEY_KP_ENTER) {
+				searchFocused = false;
+				return true;
+			}
+			if (k == GLFW.GLFW_KEY_RIGHT_SHIFT || k == GLFW.GLFW_KEY_LEFT_SHIFT) {
+				return true;
+			}
 		}
 		if (event.key() == GLFW.GLFW_KEY_RIGHT_SHIFT) {
 			onClose();
