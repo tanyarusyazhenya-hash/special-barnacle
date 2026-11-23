@@ -13,6 +13,7 @@ import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.AutoTotem;
 import dev.aurora.module.impl.ClickPearl;
+import dev.aurora.module.impl.MaceAura;
 import dev.aurora.module.impl.FriendAlert;
 import dev.aurora.module.impl.Macros;
 import dev.aurora.module.impl.Particles;
@@ -68,6 +69,7 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static MaceAura maceAura;
 	public static FriendAlert friendAlert;
 	public static Macros macros;
 	public static Particles particles;
@@ -104,6 +106,7 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		maceAura = new MaceAura();
 		friendAlert = new FriendAlert();
 		macros = new Macros();
 		particles = new Particles();
@@ -147,6 +150,7 @@ public final class ModuleManager {
 		MODULES.add(macros);
 		MODULES.add(autoTotem);
 		MODULES.add(killAura);
+		MODULES.add(maceAura);
 		MODULES.add(triggerBot);
 		MODULES.add(popCounter);
 		MODULES.add(targetAura);
