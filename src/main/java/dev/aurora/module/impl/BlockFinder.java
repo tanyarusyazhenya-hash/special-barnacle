@@ -7,8 +7,11 @@ import dev.aurora.render.EspProvider;
 import dev.aurora.render.EspStyle;
 import dev.aurora.setting.BoolSetting;
 import dev.aurora.setting.ColorSetting;
+import dev.aurora.setting.ModeSetting;
 import dev.aurora.setting.NumberSetting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -63,6 +66,7 @@ public class BlockFinder extends Module implements EspProvider {
 	public final NumberSetting minY = add(new NumberSetting("Min Y", -64, -64, 320, 1));
 	public final NumberSetting maxY = add(new NumberSetting("Max Y", 320, -64, 320, 1));
 	public final NumberSetting maxBlocks = add(new NumberSetting("Max Blocks", 400, 50, 3000, 50));
+	public final ModeSetting antiXray = add(new ModeSetting("Anti-Xray Filter", "Off", "Off", "Exposed Only"));
 	public final EspStyle style;
 
 	private final List<Ore> ores = new ArrayList<>();
@@ -75,7 +79,11 @@ public class BlockFinder extends Module implements EspProvider {
 	private int offsetRadius = -1;
 
 	public BlockFinder() {
-		super("BlockFinder", "Highlights selected ores (off by default)", Category.RENDER);
+		this("BlockFinder", "Highlights selected ores (off by default)");
+	}
+
+	protected BlockFinder(String name, String description) {
+		super(name, description, Category.RENDER);
 		style = new EspStyle(this);
 		style.range.set(96);
 
@@ -128,6 +136,7 @@ public class BlockFinder extends Module implements EspProvider {
 				}
 			}
 		}
+		signature |= antiXray.index() << 20;
 		if (signature != lastSignature) {
 			// the set of ores changed: forget everything and rescan
 			lastSignature = signature;
@@ -211,12 +220,34 @@ public class BlockFinder extends Module implements EspProvider {
 							continue;
 						}
 						int wx = (cx << 4) + x, wy = baseY + y, wz = (cz << 4) + z;
+						if (antiXray.is("Exposed Only") && !exposed(mc, new BlockPos(wx, wy, wz))) {
+							continue;
+						}
 						result.add(new Found(new AABB(wx, wy, wz, wx + 1, wy + 1, wz + 1).inflate(0.002), ore, wy));
 					}
 				}
 			}
 		}
 		return result;
+	}
+
+	/**
+	 * True if at least one side of the block touches air, a liquid or a see-through block. Servers with
+	 * anti-xray hide buried ores (or add fake ones) that have no open side, so with this filter only
+	 * ores that really are exposed, and therefore real, are shown.
+	 */
+	private static boolean exposed(Minecraft mc, BlockPos pos) {
+		for (Direction d : Direction.values()) {
+			BlockPos n = pos.relative(d);
+			if (!mc.level.getChunkSource().hasChunk(n.getX() >> 4, n.getZ() >> 4)) {
+				continue;
+			}
+			BlockState s = mc.level.getBlockState(n);
+			if (s.isAir() || !s.canOcclude() || !s.getFluidState().isEmpty()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** Chunk offsets inside the radius, nearest first. */

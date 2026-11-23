@@ -13,7 +13,9 @@ import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.AutoTotem;
 import dev.aurora.module.impl.ChinaHat;
+import dev.aurora.module.impl.BaseFinder;
 import dev.aurora.module.impl.ClickPearl;
+import dev.aurora.module.impl.Xray;
 import dev.aurora.module.impl.HoleEsp;
 import dev.aurora.module.impl.JumpCircles;
 import dev.aurora.module.impl.Trail;
@@ -73,6 +75,8 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static BaseFinder baseFinder;
+	public static Xray xray;
 	public static HoleEsp holeEsp;
 	public static Trail trail;
 	public static JumpCircles jumpCircles;
@@ -114,6 +118,8 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		baseFinder = new BaseFinder();
+		xray = new Xray();
 		holeEsp = new HoleEsp();
 		trail = new Trail();
 		jumpCircles = new JumpCircles();
@@ -147,6 +153,8 @@ public final class ModuleManager {
 		MODULES.add(playerEsp);
 		MODULES.add(entityEsp);
 		MODULES.add(blockFinder);
+		MODULES.add(xray);
+		MODULES.add(baseFinder);
 		MODULES.add(tracers);
 		MODULES.add(holeEsp);
 		MODULES.add(trail);
