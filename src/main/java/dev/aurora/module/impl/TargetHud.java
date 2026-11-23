@@ -11,6 +11,11 @@ import net.minecraft.world.entity.LivingEntity;
 
 /** Card with the target's face, name, health bar and armor. Drawn by TargetHudRenderer. */
 public class TargetHud extends Module {
+	public final ModeSetting style = add(new ModeSetting("Style", "Classic", "Classic", "Compact", "Minimal", "Modern",
+		"Neon", "Ring", "Bubble"));
+	public final ModeSetting barStyle = add(new ModeSetting("Bar Style", "Smooth", "Smooth", "Segmented", "Gradient"));
+	public final BoolSetting colorByHealth = add(new BoolSetting("Color Bar By Health", true));
+	public final BoolSetting showDistance = add(new BoolSetting("Show Distance", true));
 	public final ModeSetting source = add(new ModeSetting("Target", "Crosshair", "Crosshair", "Nearest Player"));
 	public final NumberSetting linger = add(new NumberSetting("Linger (sec)", 3, 0, 10, 0.5));
 	public final BoolSetting playersOnly = add(new BoolSetting("Players Only", false));
@@ -26,6 +31,9 @@ public class TargetHud extends Module {
 
 	public TargetHud() {
 		super("TargetHUD", "Shows health and armor of the entity you are fighting", Category.HUD);
+		face.visibleWhen(() -> !style.is("Minimal") && !style.is("Ring"));
+		armor.visibleWhen(() -> style.is("Classic") || style.is("Modern") || style.is("Neon"));
+		opacity.visibleWhen(() -> !style.is("Minimal"));
 	}
 
 	@Override

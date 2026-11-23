@@ -29,6 +29,7 @@ public class InterfaceModule extends Module {
 	public final BoolSetting dim = add(new BoolSetting("Dim Background", true));
 	public final NumberSetting dimOpacity = add(new NumberSetting("Dim Opacity", 0.45, 0.0, 0.9, 0.05));
 	public final BoolSetting greeting = add(new BoolSetting("Welcome Text", true));
+	public final BoolSetting customMenu = add(new BoolSetting("Custom Main Menu", true));
 
 	public final ModeSetting profile = add(new ModeSetting("Profile", "1", "1", "2", "3", "4"));
 	public final ActionSetting saveProfile = add(new ActionSetting("Save Profile", () -> ModuleManager.saveProfile(profile.get())));

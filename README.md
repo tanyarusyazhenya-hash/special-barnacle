@@ -67,3 +67,10 @@ and adding a Gradle wrapper (`gradle wrapper`). Requires Java 21.
 - **Predictions** (Visuals): trajectory and landing marker for the item in your hand (pearl, snowball, egg, potions, XP bottle, trident, bow/crossbow) and for projectiles already flying.
 - **Groups window**: open it with the "Groups" button in the ClickGUI title bar (or Friends > Open Groups Window): create groups, click online players to invite them, type a name, remove members. Commands still work: `/group invite <player>` (group "team"), `/group add|remove <group> <player>`, `/group delete <group>`, `/group list`, plus "Add Nearest To Team" in Friends. Group members count as friends: KillAura/AutoCrystal/AutoAnchor never target them and ESP recolors them. Groups are local to your client (`config/aurora_groups.json`); other players are not notified.
 - **KillAura presets** (Legit / Strict / Grim / Custom): limited FOV, aim at a drifting point in the hitbox with noise and mouse-sensitivity steps, attacks only when the crosshair is on the hitbox, random timing and rare missed swings. Not tested against any anti-cheat; it is not undetectable.
+
+## Added in v0.8
+- **TargetAura** (Combat): runs after the nearest enemy player and jumps (Follow or Orbit). Presses your movement keys and turns you toward the target; releases them when off. Friends and group members are ignored. It only moves you, KillAura does the hitting.
+- **Hitboxes** (Visuals): colored, see-through hitboxes for players, hostile/passive mobs, items and projectiles. Display only, it does not enlarge real hitboxes.
+- **Custom main menu**: replaces the title screen (Interface > Custom Main Menu). Singleplayer, Multiplayer, Options, Quit and **Accounts**.
+- **Account switcher**: saved offline names (`config/aurora_accounts.json`), click to use. Works on cracked servers and singleplayer only; premium servers need a real login and will refuse these names.
+- **TargetHUD styles**: Classic, Compact, Minimal, Modern, Neon, Ring, Bubble; bar styles Smooth, Segmented, Gradient; health or accent coloring; distance.

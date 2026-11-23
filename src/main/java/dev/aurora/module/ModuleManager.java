@@ -13,6 +13,8 @@ import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.AutoTotem;
 import dev.aurora.module.impl.ClickPearl;
+import dev.aurora.module.impl.Hitboxes;
+import dev.aurora.module.impl.TargetAura;
 import dev.aurora.module.impl.Predictions;
 import dev.aurora.module.impl.TargetHud;
 import dev.aurora.module.impl.BlockFinder;
@@ -59,6 +61,8 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static TargetAura targetAura;
+	public static Hitboxes hitboxes;
 	public static Predictions predictions;
 	public static TargetHud targetHud;
 	public static ClickPearl clickPearl;
@@ -86,6 +90,8 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		targetAura = new TargetAura();
+		hitboxes = new Hitboxes();
 		predictions = new Predictions();
 		targetHud = new TargetHud();
 		clickPearl = new ClickPearl();
@@ -106,6 +112,7 @@ public final class ModuleManager {
 		MODULES.add(entityEsp);
 		MODULES.add(blockFinder);
 		MODULES.add(tracers);
+		MODULES.add(hitboxes);
 		MODULES.add(predictions);
 		MODULES.add(nametags);
 		MODULES.add(waypoints);
@@ -115,6 +122,7 @@ public final class ModuleManager {
 		MODULES.add(autoSprint);
 		MODULES.add(autoTotem);
 		MODULES.add(killAura);
+		MODULES.add(targetAura);
 		MODULES.add(clickPearl);
 		MODULES.add(autoCrystal);
 		MODULES.add(autoAnchor);

@@ -40,11 +40,16 @@ public class AuroraClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		ModuleManager.init();
 		ModuleManager.load();
+		ClientLifecycleEvents.CLIENT_STARTED.register(mc -> dev.aurora.account.AccountManager.init());
 
 		openGui = KeyBindingHelper.registerKeyBinding(new KeyMapping(
 			"key.aurora.open_gui", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
 
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
+			if (mc.screen != null && mc.screen.getClass() == net.minecraft.client.gui.screens.TitleScreen.class
+				&& ModuleManager.ui.customMenu.value) {
+				mc.setScreen(new dev.aurora.gui.AuroraMenuScreen());
+			}
 			while (openGui.consumeClick()) {
 				if (mc.screen == null) {
 					mc.setScreen(new ClickGuiScreen());
