@@ -13,6 +13,7 @@ import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.AutoTotem;
 import dev.aurora.module.impl.ClickPearl;
+import dev.aurora.module.impl.FriendAlert;
 import dev.aurora.module.impl.Macros;
 import dev.aurora.module.impl.Particles;
 import dev.aurora.module.impl.CustomCrosshair;
@@ -67,6 +68,7 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static FriendAlert friendAlert;
 	public static Macros macros;
 	public static Particles particles;
 	public static TriggerBot triggerBot;
@@ -102,6 +104,7 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		friendAlert = new FriendAlert();
 		macros = new Macros();
 		particles = new Particles();
 		triggerBot = new TriggerBot();
@@ -152,6 +155,7 @@ public final class ModuleManager {
 		MODULES.add(autoAnchor);
 		MODULES.add(autoReconnect);
 		MODULES.add(friends);
+		MODULES.add(friendAlert);
 		MODULES.add(hud);
 		MODULES.add(targetHud);
 		MODULES.add(ui);

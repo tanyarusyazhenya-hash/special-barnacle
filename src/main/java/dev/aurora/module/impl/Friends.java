@@ -88,6 +88,23 @@ public class Friends extends Module {
 		return false;
 	}
 
+	/** Same as isFriend, for a name from the tab list (the player does not need to be in render distance). */
+	public boolean isFriendName(String name) {
+		if (!isEnabled()) {
+			return false;
+		}
+		String n = name.toLowerCase(Locale.ROOT);
+		if (names.contains(n)) {
+			return true;
+		}
+		for (Set<String> g : groups.values()) {
+			if (g.contains(n)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public java.util.List<String> groupNames() {
 		return new java.util.ArrayList<>(groups.keySet());
 	}

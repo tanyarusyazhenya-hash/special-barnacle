@@ -88,3 +88,4 @@ and adding a Gradle wrapper (`gradle wrapper`). Requires Java 21.
 - **Macros** (Utility): a key sends a command or chat message. Edit them in the Macros window (Macros > Open Macros Window), saved to `config/aurora_macros.json`.
 - **More themes** (Sunset, Mint, Sakura, Cyber, Lava, Arctic, Lime, Midnight, Coral, Candy, Mono) and **gradient accents** (title bar line, notifications, TargetHUD gradient bar, loading bar). Interface > Gradient Accents / Animate Gradient / Custom Gradient Color.
 - **Particles** (Visuals): Halo, Spiral, Orbit, Wings, Trail and Cloud effects with several particle types, optionally on other players. Only you see them. A custom cape is not possible without changing the game's player renderer.
+- **FriendAlert** (Utility): toast, chat message and sound when a friend or group member joins or leaves the server, read from the tab list. Players already online when you join are not announced.
