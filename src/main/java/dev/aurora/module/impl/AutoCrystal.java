@@ -5,6 +5,7 @@ import dev.aurora.module.Category;
 import dev.aurora.module.Module;
 import dev.aurora.module.ModuleManager;
 import dev.aurora.setting.BoolSetting;
+import dev.aurora.setting.ModeSetting;
 import dev.aurora.setting.NumberSetting;
 import dev.aurora.util.CombatUtil;
 import net.minecraft.client.Minecraft;
@@ -40,8 +41,9 @@ public class AutoCrystal extends Module {
 	public final NumberSetting breakRange = add(new NumberSetting("Break Range", 4.0, 2.0, 6.0, 0.5));
 	public final NumberSetting placeDelay = add(new NumberSetting("Place Delay (ticks)", 2, 0, 10, 1));
 	public final NumberSetting breakDelay = add(new NumberSetting("Break Delay (ticks)", 1, 0, 10, 1));
-	public final NumberSetting minDamage = add(new NumberSetting("Min Target Damage", 4, 1, 36, 1));
-	public final NumberSetting maxSelf = add(new NumberSetting("Max Self Damage", 10, 1, 36, 1));
+	public final NumberSetting minDamage = add(new NumberSetting("Min Target Damage", 3, 1, 36, 1));
+	public final ModeSetting safety = add(new ModeSetting("Self Damage Check", "Lenient", "Normal", "Lenient", "Off"));
+	public final NumberSetting maxSelf = add(new NumberSetting("Max Self Damage", 12, 1, 36, 1));
 	public final BoolSetting antiSuicide = add(new BoolSetting("Anti Suicide", true));
 	public final BoolSetting autoSwitch = add(new BoolSetting("Auto Switch", true));
 	public final BoolSetting rotate = add(new BoolSetting("Rotate", false));
@@ -53,9 +55,12 @@ public class AutoCrystal extends Module {
 
 	// counters from the last placement scan, used to explain why nothing was placed
 	private int bases, weak, unsafe;
+	private double minSelfSeen, bestTargetSeen;
 
 	public AutoCrystal() {
 		super("AutoCrystal", "Places and breaks end crystals near enemies", Category.COMBAT);
+		maxSelf.visibleWhen(() -> safety.is("Normal"));
+		antiSuicide.visibleWhen(() -> !safety.is("Off"));
 		placeRange.visibleWhen(() -> place.value);
 		placeDelay.visibleWhen(() -> place.value);
 		breakRange.visibleWhen(() -> breakCrystals.value);
@@ -153,9 +158,9 @@ public class AutoCrystal extends Module {
 			if (bases == 0) {
 				setStatus("No obsidian or bedrock in range");
 			} else if (weak > 0 && unsafe == 0) {
-				setStatus("Target too far for damage");
+				setStatus(String.format("Target too far (best %.1f dmg, min %.0f)", bestTargetSeen, minDamage.value));
 			} else if (unsafe > 0) {
-				setStatus("Too dangerous for you");
+				setStatus(String.format("Too dangerous (lowest self damage %.1f)", minSelfSeen));
 			} else {
 				setStatus("No good spot");
 			}
@@ -179,8 +184,19 @@ public class AutoCrystal extends Module {
 		setStatus("Placing");
 	}
 
+	/**
+	 * Normal: self damage under the limit and not lethal. Lenient: only not lethal (health stays above
+	 * 2 hearts). Off: no check at all, you can die.
+	 */
 	private boolean selfSafe(double dmgSelf, double selfHp) {
-		return dmgSelf <= maxSelf.value && !(antiSuicide.value && dmgSelf >= selfHp - 1.0);
+		minSelfSeen = Math.min(minSelfSeen, dmgSelf);
+		if (safety.is("Off")) {
+			return true;
+		}
+		if (safety.is("Normal") && dmgSelf > maxSelf.value) {
+			return false;
+		}
+		return !(antiSuicide.value && dmgSelf >= selfHp - (safety.is("Lenient") ? 4.0 : 1.0));
 	}
 
 	private void look(LocalPlayer p, Vec3 at) {
@@ -193,6 +209,8 @@ public class AutoCrystal extends Module {
 		bases = 0;
 		weak = 0;
 		unsafe = 0;
+		minSelfSeen = 1e9;
+		bestTargetSeen = 0;
 		Vec3 eye = p.getEyePosition();
 		int r = (int) Math.ceil(placeRange.value);
 		BlockPos origin = p.blockPosition();
@@ -220,6 +238,7 @@ public class AutoCrystal extends Module {
 					}
 					bases++;
 					double dmgTarget = CombatUtil.explosionDamage(mc, top, target, 6.0);
+					bestTargetSeen = Math.max(bestTargetSeen, dmgTarget);
 					if (dmgTarget < minDamage.value) {
 						weak++;
 						continue;

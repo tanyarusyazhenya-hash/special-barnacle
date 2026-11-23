@@ -5,6 +5,7 @@ import dev.aurora.module.Category;
 import dev.aurora.module.Module;
 import dev.aurora.module.ModuleManager;
 import dev.aurora.setting.BoolSetting;
+import dev.aurora.setting.ModeSetting;
 import dev.aurora.setting.NumberSetting;
 import dev.aurora.util.CombatUtil;
 import net.minecraft.client.Minecraft;
@@ -36,8 +37,9 @@ public class AutoAnchor extends Module {
 	public final NumberSetting targetRange = add(new NumberSetting("Target Range", 8, 3, 12, 1));
 	public final NumberSetting placeRange = add(new NumberSetting("Place Range", 4.5, 2.0, 6.0, 0.5));
 	public final NumberSetting delay = add(new NumberSetting("Delay (ticks)", 2, 0, 10, 1));
-	public final NumberSetting minDamage = add(new NumberSetting("Min Target Damage", 4, 1, 36, 1));
-	public final NumberSetting maxSelf = add(new NumberSetting("Max Self Damage", 10, 1, 36, 1));
+	public final NumberSetting minDamage = add(new NumberSetting("Min Target Damage", 3, 1, 36, 1));
+	public final ModeSetting safety = add(new ModeSetting("Self Damage Check", "Lenient", "Normal", "Lenient", "Off"));
+	public final NumberSetting maxSelf = add(new NumberSetting("Max Self Damage", 12, 1, 36, 1));
 	public final BoolSetting antiSuicide = add(new BoolSetting("Anti Suicide", true));
 	public final BoolSetting autoSwitch = add(new BoolSetting("Auto Switch", true));
 	public final BoolSetting rotate = add(new BoolSetting("Rotate", false));
@@ -47,9 +49,12 @@ public class AutoAnchor extends Module {
 	private int timer = 100;
 	private String status = "Idle";
 	private int spots, weak, unsafe;
+	private double minSelfSeen, bestTargetSeen;
 
 	public AutoAnchor() {
 		super("AutoAnchor", "Places, charges and detonates respawn anchors", Category.COMBAT);
+		maxSelf.visibleWhen(() -> safety.is("Normal"));
+		antiSuicide.visibleWhen(() -> !safety.is("Off"));
 	}
 
 	@Override
@@ -143,8 +148,19 @@ public class AutoAnchor extends Module {
 		}
 	}
 
+	/**
+	 * Normal: self damage under the limit and not lethal. Lenient: only not lethal (health stays above
+	 * 2 hearts). Off: no check at all, you can die.
+	 */
 	private boolean selfSafe(double dmgSelf, double selfHp) {
-		return dmgSelf <= maxSelf.value && !(antiSuicide.value && dmgSelf >= selfHp - 1.0);
+		minSelfSeen = Math.min(minSelfSeen, dmgSelf);
+		if (safety.is("Off")) {
+			return true;
+		}
+		if (safety.is("Normal") && dmgSelf > maxSelf.value) {
+			return false;
+		}
+		return !(antiSuicide.value && dmgSelf >= selfHp - (safety.is("Lenient") ? 4.0 : 1.0));
 	}
 
 	private boolean useAnchor(Minecraft mc, LocalPlayer p, BlockPos pos) {
@@ -184,6 +200,8 @@ public class AutoAnchor extends Module {
 		spots = 0;
 		weak = 0;
 		unsafe = 0;
+		minSelfSeen = 1e9;
+		bestTargetSeen = 0;
 		BlockPos t = target.blockPosition();
 		BlockPos bestSupport = null;
 		Direction bestFace = null;
@@ -222,6 +240,7 @@ public class AutoAnchor extends Module {
 					spots++;
 					Vec3 center = Vec3.atCenterOf(pos);
 					double dmgTarget = CombatUtil.explosionDamage(mc, center, target, POWER);
+					bestTargetSeen = Math.max(bestTargetSeen, dmgTarget);
 					if (dmgTarget < minDamage.value) {
 						weak++;
 						continue;
@@ -245,9 +264,9 @@ public class AutoAnchor extends Module {
 			if (spots == 0) {
 				setStatus("No free spot next to target in reach");
 			} else if (weak > 0 && unsafe == 0) {
-				setStatus("Target too far for damage");
+				setStatus(String.format("Target too far (best %.1f dmg, min %.0f)", bestTargetSeen, minDamage.value));
 			} else {
-				setStatus("Too dangerous for you");
+				setStatus(String.format("Too dangerous (lowest self damage %.1f)", minSelfSeen));
 			}
 			return false;
 		}

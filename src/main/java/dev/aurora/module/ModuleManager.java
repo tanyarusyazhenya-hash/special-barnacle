@@ -16,7 +16,6 @@ import dev.aurora.module.impl.ChinaHat;
 import dev.aurora.module.impl.ClickPearl;
 import dev.aurora.module.impl.HoleEsp;
 import dev.aurora.module.impl.JumpCircles;
-import dev.aurora.module.impl.Radar;
 import dev.aurora.module.impl.Trail;
 import dev.aurora.module.impl.MaceAura;
 import dev.aurora.module.impl.FriendAlert;
@@ -78,7 +77,6 @@ public final class ModuleManager {
 	public static Trail trail;
 	public static JumpCircles jumpCircles;
 	public static ChinaHat chinaHat;
-	public static Radar radar;
 	public static MaceAura maceAura;
 	public static FriendAlert friendAlert;
 	public static Macros macros;
@@ -120,7 +118,6 @@ public final class ModuleManager {
 		trail = new Trail();
 		jumpCircles = new JumpCircles();
 		chinaHat = new ChinaHat();
-		radar = new Radar();
 		maceAura = new MaceAura();
 		friendAlert = new FriendAlert();
 		macros = new Macros();
@@ -155,7 +152,6 @@ public final class ModuleManager {
 		MODULES.add(trail);
 		MODULES.add(jumpCircles);
 		MODULES.add(chinaHat);
-		MODULES.add(radar);
 		MODULES.add(particles);
 		MODULES.add(timeChanger);
 		MODULES.add(crosshair);
