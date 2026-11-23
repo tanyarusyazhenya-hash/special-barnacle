@@ -160,10 +160,6 @@ public final class ModuleManager {
 		return MODULES;
 	}
 
-	public static List<Module> all() {
-		return MODULES;
-	}
-
 	public static List<Module> byCategory(Category category) {
 		List<Module> out = new ArrayList<>();
 		for (Module m : MODULES) {
