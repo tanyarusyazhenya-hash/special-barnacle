@@ -82,3 +82,9 @@ and adding a Gradle wrapper (`gradle wrapper`). Requires Java 21.
 - **PopCounter** (Combat): counts other players' totem pops (guessed from the totem's Regeneration II + Absorption effects), shows them in chat, toasts and nametags.
 - **TimeChanger** (Visuals): fixed or cycling time of day, client-side only.
 - **CustomCrosshair** (Visuals): Cross, Plus, Dot, Circle, Square, Cross + Dot; size, gap, thickness, outline, colors, enemy color, dynamic gap and an attack cooldown ring.
+
+## Added in v1.0
+- **Aurora loading and disconnect screens**: connecting, joining a world and the disconnect screen are painted in the Aurora style (logo, animated bar, reason text); the vanilla buttons still work. Turn off with Interface > Custom Main Menu.
+- **Macros** (Utility): a key sends a command or chat message. Edit them in the Macros window (Macros > Open Macros Window), saved to `config/aurora_macros.json`.
+- **More themes** (Sunset, Mint, Sakura, Cyber, Lava, Arctic, Lime, Midnight, Coral, Candy, Mono) and **gradient accents** (title bar line, notifications, TargetHUD gradient bar, loading bar). Interface > Gradient Accents / Animate Gradient / Custom Gradient Color.
+- **Particles** (Visuals): Halo, Spiral, Orbit, Wings, Trail and Cloud effects with several particle types, optionally on other players. Only you see them. A custom cape is not possible without changing the game's player renderer.

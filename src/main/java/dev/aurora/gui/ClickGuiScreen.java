@@ -195,7 +195,13 @@ public class ClickGuiScreen extends Screen {
 	private void renderTitleBar(GuiGraphics g, Font font, int mx, int my, int accent) {
 		GuiUtil.rrect(g, x0, y0, winW, TB, 7, c(0x111114, 1f));
 		g.fill(x0, y0 + TB - 7, x0 + winW, y0 + TB, c(0x111114, 1f));
-		g.fill(x0 + 1, y0 + TB, x0 + winW - 1, y0 + TB + 1, c(0xFFFFFF, 0.06f));
+		if (ModuleManager.ui.gradient.value) {
+			for (int i = 0; i < winW - 2; i++) {
+				g.fill(x0 + 1 + i, y0 + TB, x0 + 2 + i, y0 + TB + 2, c(ModuleManager.ui.gradientAt(i / (float) (winW - 2)), 0.9f));
+			}
+		} else {
+			g.fill(x0 + 1, y0 + TB, x0 + winW - 1, y0 + TB + 1, c(0xFFFFFF, 0.06f));
+		}
 
 		logo(g, font, x0 + 12, y0 + 7, accent);
 		g.drawString(font, "aurora", x0 + 32, y0 + 10, c(0xFFFFFF, 1f), false);

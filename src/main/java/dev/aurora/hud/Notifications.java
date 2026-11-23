@@ -81,7 +81,7 @@ public final class Notifications {
 			int x = right ? gw - w - 8 + slide : 8 - slide;
 			float a = Math.max(0f, out);
 			GuiUtil.rrect(g, x, y, w, h, 4, ColorUtil.argb(0x0B0B10, 0.85f * a));
-			g.fill(x + 1, y + 4, x + 4, y + h - 4, ColorUtil.argb(n.rgb(), a));
+			g.fillGradient(x + 1, y + 4, x + 4, y + h - 4, ColorUtil.argb(n.rgb(), a), ColorUtil.argb(ui.accent2(), a * 0.8f));
 			g.drawString(font, n.title(), x + 10, y + 4, ColorUtil.argb(0xFFFFFF, a), false);
 			g.drawString(font, n.text(), x + 10, y + 14, ColorUtil.argb(n.rgb(), a), false);
 			y += bottom ? -(h + 4) : (h + 4);

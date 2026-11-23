@@ -182,9 +182,10 @@ public final class TargetHudRenderer {
 				g.fill(x, y, x + w, y + h, 0x44FFFFFF);
 				int fill = Math.max(1, (int) (w * frac));
 				int c1 = 0xFF000000 | accent;
+				int c2 = 0xFF000000 | ModuleManager.ui.accent2();
 				for (int i = 0; i < fill; i++) {
 					float k = i / (float) Math.max(1, w - 1);
-					g.fill(x + i, y, x + i + 1, y + h, lerp(c1, 0xFFFFFFFF, k * 0.6f));
+					g.fill(x + i, y, x + i + 1, y + h, lerp(c1, c2, k));
 				}
 			}
 			default -> {

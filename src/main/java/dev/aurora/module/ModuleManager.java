@@ -13,6 +13,8 @@ import dev.aurora.module.impl.AutoReconnect;
 import dev.aurora.module.impl.AutoSprint;
 import dev.aurora.module.impl.AutoTotem;
 import dev.aurora.module.impl.ClickPearl;
+import dev.aurora.module.impl.Macros;
+import dev.aurora.module.impl.Particles;
 import dev.aurora.module.impl.CustomCrosshair;
 import dev.aurora.module.impl.PopCounter;
 import dev.aurora.module.impl.TimeChanger;
@@ -65,6 +67,8 @@ public final class ModuleManager {
 	public static Waypoints waypoints;
 	public static Fullbright fullbright;
 	public static Zoom zoom;
+	public static Macros macros;
+	public static Particles particles;
 	public static TriggerBot triggerBot;
 	public static PopCounter popCounter;
 	public static TimeChanger timeChanger;
@@ -98,6 +102,8 @@ public final class ModuleManager {
 		waypoints = new Waypoints();
 		fullbright = new Fullbright();
 		zoom = new Zoom();
+		macros = new Macros();
+		particles = new Particles();
 		triggerBot = new TriggerBot();
 		popCounter = new PopCounter();
 		timeChanger = new TimeChanger();
@@ -124,6 +130,7 @@ public final class ModuleManager {
 		MODULES.add(entityEsp);
 		MODULES.add(blockFinder);
 		MODULES.add(tracers);
+		MODULES.add(particles);
 		MODULES.add(timeChanger);
 		MODULES.add(crosshair);
 		MODULES.add(hitboxes);
@@ -134,6 +141,7 @@ public final class ModuleManager {
 		MODULES.add(zoom);
 		MODULES.add(freecam);
 		MODULES.add(autoSprint);
+		MODULES.add(macros);
 		MODULES.add(autoTotem);
 		MODULES.add(killAura);
 		MODULES.add(triggerBot);

@@ -62,6 +62,7 @@ public class AuroraClient implements ClientModInitializer {
 
 		ClientCommandRegistrationCallback.EVENT.register(
 			(dispatcher, registryAccess) -> ModuleManager.friends.registerCommands(dispatcher));
+		dev.aurora.gui.ScreenOverlay.register();
 		AutoReconnect.register();
 
 		HudElementRegistry.replaceElement(VanillaHudElements.CROSSHAIR, original -> (graphics, tickCounter) -> {
