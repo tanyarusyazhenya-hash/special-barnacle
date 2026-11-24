@@ -14,7 +14,8 @@ import dev.aurora.setting.BoolSetting;
 import dev.aurora.setting.ColorSetting;
 import dev.aurora.setting.ModeSetting;
 import dev.aurora.setting.NumberSetting;
-import dev.aurora.util.CombatUtil;
+import dev.aurora.path.PathFollower;
+import dev.aurora.path.Pathfinder;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -22,13 +23,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.FallingBlock;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -41,25 +40,29 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Looks for player bases and can dig toward them for you.
+ * Looks for player bases and walks / digs to search for them (Aurora's own A* path finder, no Baritone).
  * <p>
  * Finding: block entities (chests, barrels, shulker boxes, hoppers, furnaces, beds...) are sent to the
  * client even when the server hides ores with anti-xray, so clusters of them inside your loaded
- * chunks are reported as probable bases. Villages and other structures also have such blocks, so
- * expect some false alarms; raise the minimums to reduce them.
+ * chunks are reported as probable bases. Villages also have such blocks, so expect some false alarms.
  * <p>
- * Tunnel mode digs a 1x2 tunnel in a straight line (loading new chunks as you go) and stops at
- * lava or water, gaps in the floor, containers, low health or when a player shows up. It only moves
- * and mines; it does not eat, place blocks or avoid mobs. Off by default every launch.
+ * Explore: travels along long lanes (Straight or Serpentine), plans a path every few seconds toward a
+ * point ahead, walks, jumps, drops down and mines through whatever is in the way. New chunks load as
+ * you move, so they get scanned. Go To Base: the same, toward the nearest base found. It stops on
+ * low health, nearby players, liquids or lava and when it cannot find a way. It does not eat, place
+ * blocks or fight mobs. Off by default every launch.
  */
 public class BaseFinder extends Module implements EspProvider, LineProvider {
 	private record Sign(BlockPos pos, boolean storage) {}
 
 	private record Base(Vec3 center, int count, int storage) {}
 
-	public final ModeSetting mode = add(new ModeSetting("Mode", "Scan", "Scan", "Tunnel"));
-	public final ModeSetting direction = add(new ModeSetting("Tunnel Direction", "Facing", "Facing", "North", "South",
+	public final ModeSetting mode = add(new ModeSetting("Mode", "Scan", "Scan", "Explore", "Go To Base"));
+	public final ModeSetting direction = add(new ModeSetting("Explore Direction", "Facing", "Facing", "North", "South",
 		"East", "West"));
+	public final ModeSetting pattern = add(new ModeSetting("Explore Pattern", "Serpentine", "Straight", "Serpentine"));
+	public final ModeSetting level = add(new ModeSetting("Explore Level", "Keep Y", "Keep Y", "Surface"));
+	public final NumberSetting laneLength = add(new NumberSetting("Lane Length", 1500, 200, 10000, 100));
 	public final NumberSetting chunkRadius = add(new NumberSetting("Scan Radius (chunks)", 10, 2, 32, 1));
 	public final NumberSetting minBlocks = add(new NumberSetting("Min Blocks For Base", 6, 2, 40, 1));
 	public final NumberSetting minStorage = add(new NumberSetting("Min Storage Blocks", 3, 0, 20, 1));
@@ -72,9 +75,12 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 	public final BoolSetting tracer = add(new BoolSetting("Line To Nearest Base", true));
 	public final ColorSetting color = add(new ColorSetting("Color", 0xFF7A1A));
 
-	// tunnel safety
-	public final BoolSetting autoPickaxe = add(new BoolSetting("Auto Pickaxe", true));
+	// travel
+	public final BoolSetting allowDig = add(new BoolSetting("Allow Digging", true));
+	public final BoolSetting autoTool = add(new BoolSetting("Auto Tool", true));
+	public final BoolSetting sprint = add(new BoolSetting("Sprint", true));
 	public final BoolSetting stopOnBase = add(new BoolSetting("Stop When Base Found", true));
+	public final BoolSetting walkToFound = add(new BoolSetting("Then Walk To It", true));
 	public final BoolSetting stopOnPlayer = add(new BoolSetting("Stop When Player Near", true));
 	public final NumberSetting playerDistance = add(new NumberSetting("Player Distance", 24, 8, 64, 2));
 	public final NumberSetting minHealth = add(new NumberSetting("Stop Below Health", 8, 1, 20, 1));
@@ -83,21 +89,39 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 
 	private final List<Sign> signs = new ArrayList<>();
 	private final List<Base> bases = new ArrayList<>();
+	private final List<Vec3> known = new ArrayList<>();
 	private final Set<Long> announced = new HashSet<>();
+	private final PathFollower follower = new PathFollower();
 	private int scanTimer;
-	private Direction tunnelDir = Direction.NORTH;
 	private String status = "Scanning";
+	private int lastMode = -1;
+
+	// explore state
+	private Direction laneDir = Direction.NORTH;
+	private Direction heading = Direction.NORTH;
+	private Direction shiftSide = Direction.EAST;
+	private boolean shifting;
+	private Vec3 segStart = Vec3.ZERO;
+	private double segLen;
+	private int fails;
+	private int sideStep;
 
 	public BaseFinder() {
-		super("BaseFinder", "Finds probable bases from containers; can dig toward them", Category.WORLD);
+		super("BaseFinder", "Finds probable bases from containers; walks and digs to search for them", Category.WORLD);
 		style = new EspStyle(this);
 		style.range.set(300);
-		direction.visibleWhen(() -> mode.is("Tunnel"));
-		autoPickaxe.visibleWhen(() -> mode.is("Tunnel"));
-		stopOnBase.visibleWhen(() -> mode.is("Tunnel"));
-		stopOnPlayer.visibleWhen(() -> mode.is("Tunnel"));
-		playerDistance.visibleWhen(() -> mode.is("Tunnel") && stopOnPlayer.value);
-		minHealth.visibleWhen(() -> mode.is("Tunnel"));
+		for (var s : new dev.aurora.setting.Setting[]{direction, pattern, level, laneLength}) {
+			s.visibleWhen(() -> mode.is("Explore"));
+		}
+		laneLength.visibleWhen(() -> mode.is("Explore") && pattern.is("Serpentine"));
+		autoTool.visibleWhen(() -> !mode.is("Scan") && allowDig.value);
+		allowDig.visibleWhen(() -> !mode.is("Scan"));
+		sprint.visibleWhen(() -> !mode.is("Scan"));
+		stopOnBase.visibleWhen(() -> mode.is("Explore"));
+		walkToFound.visibleWhen(() -> mode.is("Explore") && stopOnBase.value);
+		stopOnPlayer.visibleWhen(() -> !mode.is("Scan"));
+		playerDistance.visibleWhen(() -> !mode.is("Scan") && stopOnPlayer.value);
+		minHealth.visibleWhen(() -> !mode.is("Scan"));
 	}
 
 	@Override
@@ -113,21 +137,13 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 	@Override
 	protected void onEnable() {
 		scanTimer = 0;
-		Minecraft mc = Minecraft.getInstance();
-		if (mc.player != null) {
-			tunnelDir = switch (direction.get()) {
-				case "North" -> Direction.NORTH;
-				case "South" -> Direction.SOUTH;
-				case "East" -> Direction.EAST;
-				case "West" -> Direction.WEST;
-				default -> mc.player.getDirection();
-			};
-		}
+		lastMode = -1;
 	}
 
 	@Override
 	protected void onDisable() {
 		KeyMapping.setAll();
+		follower.clear();
 		signs.clear();
 		bases.clear();
 	}
@@ -135,6 +151,7 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 	private void forget() {
 		announced.clear();
 		bases.clear();
+		known.clear();
 	}
 
 	// ------------------------------------------------------------------ tick
@@ -147,13 +164,33 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 			return;
 		}
 		if (scanTimer-- <= 0) {
-			scanTimer = 40;
+			scanTimer = 20;
 			scan(mc);
 		}
-		if (mode.is("Tunnel")) {
-			tunnel(mc);
-		} else {
+		if (mode.index() != lastMode) {
+			lastMode = mode.index();
+			follower.clear();
+			fails = 0;
+			sideStep = 0;
+			KeyMapping.setAll();
+			if (mode.is("Explore")) {
+				startExplore(mc);
+			}
+		}
+		if (mode.is("Scan")) {
 			status = "Scanning";
+			return;
+		}
+		if (mc.screen != null || !mc.player.isAlive() || ModuleManager.freecam.isEnabled()) {
+			return;
+		}
+		if (safetyStop(mc)) {
+			return;
+		}
+		if (mode.is("Explore")) {
+			explore(mc);
+		} else {
+			goToBase(mc);
 		}
 	}
 
@@ -180,7 +217,7 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 
 	private void scan(Minecraft mc) {
 		signs.clear();
-		int r = Math.min(chunkRadius.i(), mc.options.getEffectiveRenderDistance());
+		int r = Math.min(chunkRadius.i(), mc.options.getEffectiveRenderDistance() + 2);
 		int pcx = mc.player.blockPosition().getX() >> 4;
 		int pcz = mc.player.blockPosition().getZ() >> 4;
 		for (int dx = -r; dx <= r; dx++) {
@@ -235,6 +272,7 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 			Vec3 center = new Vec3(sx / count, sy / count, sz / count);
 			bases.add(new Base(center, count, storage));
 			if (announced.add(cell)) {
+				known.add(center);
 				announce(mc, center, count, storage);
 			}
 		}
@@ -246,121 +284,194 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 		String text = "Probable base at " + where + " (" + dist + " blocks, " + count + " blocks, " + storage
 			+ " storage)";
 		if (chat.value) {
-			mc.player.displayClientMessage(Component.literal("§d[Aurora]§r " + text), false);
+			mc.player.displayClientMessage(Component.literal("\u00a7d[Aurora]\u00a7r " + text), false);
 		}
 		if (toast.value) {
 			Notifications.push("BaseFinder", "Base at " + where + "  " + dist + "m", color.rgb());
 		}
-		if (mode.is("Tunnel") && stopOnBase.value) {
-			stopTunnel("Base found");
+		if (mode.is("Explore") && stopOnBase.value) {
+			follower.clear();
+			KeyMapping.setAll();
+			if (walkToFound.value) {
+				mode.set(2);
+				lastMode = 2;
+				fails = 0;
+			} else {
+				stop("Base found");
+			}
 		}
 	}
 
-	// ------------------------------------------------------------------ tunnel
+	// ------------------------------------------------------------------ travel
 
-	private void stopTunnel(String reason) {
+	private void stop(String reason) {
 		status = reason;
 		mode.set(0);
+		lastMode = 0;
+		follower.clear();
 		KeyMapping.setAll();
-		Notifications.push("BaseFinder", "Tunnel stopped: " + reason, 0xF87171);
+		Notifications.push("BaseFinder", "Stopped: " + reason, 0xF87171);
 	}
 
-	private boolean liquidAt(Minecraft mc, BlockPos pos) {
-		return !mc.level.getBlockState(pos).getFluidState().isEmpty();
-	}
-
-	private void tunnel(Minecraft mc) {
+	private boolean safetyStop(Minecraft mc) {
 		LocalPlayer p = mc.player;
-		if (mc.screen != null || !p.isAlive() || ModuleManager.freecam.isEnabled()) {
-			return;
-		}
-		KeyMapping.setAll();
 		if (p.getHealth() + p.getAbsorptionAmount() < minHealth.value) {
-			stopTunnel("Low health");
-			return;
+			stop("Low health");
+			return true;
 		}
 		if (stopOnPlayer.value) {
 			for (Player other : mc.level.players()) {
-				if (other != p && p.distanceTo(other) < playerDistance.value
-					&& !ModuleManager.friends.isFriend(other)) {
-					stopTunnel("Player near: " + other.getName().getString());
-					return;
+				if (other != p && p.distanceTo(other) < playerDistance.value && !ModuleManager.friends.isFriend(other)) {
+					stop("Player near: " + other.getName().getString());
+					return true;
 				}
 			}
 		}
-		Direction d = tunnelDir;
-		Direction left = d.getCounterClockWise();
-		Direction right = d.getClockWise();
-		BlockPos feet = p.blockPosition();
-		BlockPos a1 = feet.relative(d);
-		BlockPos a2 = a1.above();
+		return false;
+	}
 
-		BlockPos[] hazards = {a1.relative(d), a2.relative(d), a2.above(), a1.relative(left), a1.relative(right),
-			a2.relative(left), a2.relative(right), a1.below(), a1, a2};
-		for (BlockPos h : hazards) {
-			if (liquidAt(mc, h)) {
-				stopTunnel("Liquid ahead");
+	private void startExplore(Minecraft mc) {
+		laneDir = switch (direction.get()) {
+			case "North" -> Direction.NORTH;
+			case "South" -> Direction.SOUTH;
+			case "East" -> Direction.EAST;
+			case "West" -> Direction.WEST;
+			default -> mc.player.getDirection();
+		};
+		heading = laneDir;
+		shiftSide = laneDir.getClockWise();
+		shifting = false;
+		segStart = mc.player.position();
+		segLen = pattern.is("Serpentine") ? laneLength.value : 1.0e9;
+	}
+
+	private double progress(Minecraft mc) {
+		Vec3 d = mc.player.position().subtract(segStart);
+		return d.x * heading.getStepX() + d.z * heading.getStepZ();
+	}
+
+	private void nextSegment(Minecraft mc) {
+		segStart = mc.player.position();
+		if (!shifting) {
+			shifting = true;
+			heading = shiftSide;
+			double r = Math.min(chunkRadius.i(), mc.options.getEffectiveRenderDistance());
+			segLen = Math.max(24, r * 32 * 0.9);
+		} else {
+			shifting = false;
+			laneDir = laneDir.getOpposite();
+			heading = laneDir;
+			segLen = laneLength.value;
+		}
+	}
+
+	private void explore(Minecraft mc) {
+		LocalPlayer p = mc.player;
+		if (progress(mc) >= segLen) {
+			nextSegment(mc);
+			follower.clear();
+		}
+		if (follower.hasPath()) {
+			PathFollower.State st = follower.tick(mc, allowDig.value, autoTool.value, sprint.value);
+			status = follower.mining ? "Digging" : "Exploring " + heading.getName();
+			if (st == PathFollower.State.RUNNING) {
 				return;
 			}
-		}
-		BlockState floor = mc.level.getBlockState(a1.below());
-		BlockState s1 = mc.level.getBlockState(a1);
-		BlockState s2 = mc.level.getBlockState(a2);
-		if (floor.getCollisionShape(mc.level, a1.below()).isEmpty() && s1.isAir()) {
-			stopTunnel("Gap in the floor");
-			return;
-		}
-		if (mc.level.getBlockEntity(a1) != null || mc.level.getBlockEntity(a2) != null) {
-			stopTunnel("Container ahead");
-			return;
-		}
-
-		// face the tunnel direction
-		float yaw = d.toYRot();
-		float dyaw = net.minecraft.util.Mth.wrapDegrees(yaw - p.getYRot());
-		p.setYRot(p.getYRot() + net.minecraft.util.Mth.clamp(dyaw, -35f, 35f));
-
-		BlockPos dig = null;
-		BlockState digState = null;
-		if (!s2.isAir() && s2.getFluidState().isEmpty()) {
-			dig = a2;
-			digState = s2;
-		} else if (!s1.isAir() && s1.getFluidState().isEmpty()) {
-			dig = a1;
-			digState = s1;
-		}
-		if (dig == null) {
-			status = "Walking " + d.getName();
-			if (Math.abs(dyaw) < 20f) {
-				mc.options.keyUp.setDown(true);
-			}
-			return;
-		}
-		if (digState.getDestroySpeed(mc.level, dig) < 0) {
-			stopTunnel("Unbreakable block");
-			return;
-		}
-		if (autoPickaxe.value) {
-			int best = -1;
-			float bestSpeed = 1f;
-			for (int i = 0; i < 9; i++) {
-				ItemStack st = p.getInventory().getItem(i);
-				if (st.is(ItemTags.PICKAXES) && st.getDestroySpeed(digState) > bestSpeed) {
-					bestSpeed = st.getDestroySpeed(digState);
-					best = i;
+			if (st == PathFollower.State.FAILED) {
+				fails++;
+				sideStep = (sideStep + 1) % 4;
+				follower.clear();
+				if (fails > 5) {
+					stop("Cannot find a way (" + follower.failReason + ")");
 				}
+				return;
 			}
-			if (best >= 0 && p.getInventory().getSelectedSlot() != best) {
-				p.getInventory().setSelectedSlot(best);
+			fails = 0;
+			follower.clear();
+		}
+		double ahead = Math.min(40, Math.max(8, segLen - progress(mc)));
+		int off = switch (sideStep) {
+			case 1 -> 6;
+			case 2 -> -6;
+			case 3 -> 12;
+			default -> 0;
+		};
+		Direction side = heading.getClockWise();
+		int gx = p.blockPosition().getX() + (int) (heading.getStepX() * ahead) + side.getStepX() * off;
+		int gz = p.blockPosition().getZ() + (int) (heading.getStepZ() * ahead) + side.getStepZ() * off;
+		int gy = p.blockPosition().getY();
+		if (level.is("Surface") && mc.level.dimension() != Level.NETHER
+			&& mc.level.getChunkSource().hasChunk(gx >> 4, gz >> 4)) {
+			gy = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, gx, gz);
+		}
+		plan(mc, new BlockPos(gx, gy, gz));
+	}
+
+	private void plan(Minecraft mc, BlockPos goal) {
+		List<BlockPos> path = Pathfinder.find(mc.level, mc.player.blockPosition(), goal, allowDig.value, 4000);
+		if (path.size() < 2) {
+			fails++;
+			sideStep = (sideStep + 1) % 4;
+			status = "No path, retrying";
+			if (fails > 5) {
+				stop("Cannot find a way");
+			}
+			return;
+		}
+		follower.setPath(path);
+	}
+
+	private void goToBase(Minecraft mc) {
+		LocalPlayer p = mc.player;
+		Vec3 best = null;
+		double bestD = Double.MAX_VALUE;
+		for (Vec3 c : known) {
+			double d = p.position().distanceToSqr(c);
+			if (d < bestD) {
+				bestD = d;
+				best = c;
 			}
 		}
-		CombatUtil.turn(p, CombatUtil.rotationsTo(p.getEyePosition(), Vec3.atCenterOf(dig)), 30f);
-		mc.gameMode.continueDestroyBlock(dig, d.getOpposite());
-		p.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
-		status = "Digging";
-		if (s2.getBlock() instanceof FallingBlock) {
-			status = "Digging (falling block)";
+		if (best == null) {
+			stop("No base found yet");
+			return;
 		}
+		double hd = Math.hypot(best.x - p.getX(), best.z - p.getZ());
+		if (hd <= 12) {
+			stop("Arrived at the base");
+			return;
+		}
+		if (follower.hasPath()) {
+			PathFollower.State st = follower.tick(mc, allowDig.value, autoTool.value, sprint.value);
+			status = follower.mining ? "Digging" : "Going to base " + (int) hd + "m";
+			if (st == PathFollower.State.RUNNING) {
+				return;
+			}
+			if (st == PathFollower.State.FAILED) {
+				fails++;
+				sideStep = (sideStep + 1) % 4;
+				follower.clear();
+				if (fails > 5) {
+					stop("Cannot find a way (" + follower.failReason + ")");
+				}
+				return;
+			}
+			fails = 0;
+			follower.clear();
+		}
+		double step = Math.min(40, hd - 8);
+		double nx = (best.x - p.getX()) / hd;
+		double nz = (best.z - p.getZ()) / hd;
+		double off = switch (sideStep) {
+			case 1 -> 6;
+			case 2 -> -6;
+			case 3 -> 12;
+			default -> 0;
+		};
+		int gx = (int) Math.floor(p.getX() + nx * step - nz * off);
+		int gz = (int) Math.floor(p.getZ() + nz * step + nx * off);
+		int gy = hd <= 48 ? (int) best.y : p.blockPosition().getY();
+		plan(mc, new BlockPos(gx, gy, gz));
 	}
 
 	// ------------------------------------------------------------------ drawing
