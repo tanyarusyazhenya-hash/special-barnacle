@@ -42,12 +42,13 @@ public class MaceAura extends Module {
 	public final NumberSetting range = add(new NumberSetting("Attack Range", 3.0, 2.0, 5.0, 0.1));
 	public final NumberSetting launchRange = add(new NumberSetting("Launch Range", 6, 3, 12, 1));
 	public final NumberSetting climbHeight = add(new NumberSetting("Elytra Climb Height", 30, 10, 100, 5));
+	public final BoolSetting stunSlam = add(new BoolSetting("Stun Slam (axe vs shield)", true));
 	public final BoolSetting swapChest = add(new BoolSetting("Swap Chestplate For Hit", true));
 	public final NumberSetting minFall = add(new NumberSetting("Min Fall Distance", 2.5, 1.5, 20, 0.5));
 	public final NumberSetting launchDelay = add(new NumberSetting("Launch Delay (ticks)", 20, 5, 60, 1));
 	public final BoolSetting driftToTarget = add(new BoolSetting("Drift To Target", true));
 	public final BoolSetting autoSwitch = add(new BoolSetting("Auto Switch Items", true));
-	public final NumberSetting turnSpeed = add(new NumberSetting("Turn Speed", 45, 10, 180, 5));
+	public final NumberSetting turnSpeed = add(new NumberSetting("Turn Speed", 30, 10, 180, 5));
 	public final NumberSetting aimNoise = add(new NumberSetting("Aim Noise (deg)", 0.5, 0.0, 3.0, 0.1));
 	public final BoolSetting groundAttack = add(new BoolSetting("Attack On Ground", true));
 	public final BoolSetting requireCrosshair = add(new BoolSetting("Require Crosshair On Hitbox", true));
@@ -168,7 +169,7 @@ public class MaceAura extends Module {
 		float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
 		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
 		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
-		CombatUtil.turn(p, rot, turnSpeed.f());
+		aim(p, rot);
 
 		if (driftToTarget.value) {
 			KeyMapping.setAll();
@@ -200,6 +201,9 @@ public class MaceAura extends Module {
 			}
 		}
 		if (attackDelay > 0) {
+			return;
+		}
+		if (stunFirst(mc, p, target)) {
 			return;
 		}
 		mc.gameMode.attack(p, target);
@@ -253,7 +257,7 @@ public class MaceAura extends Module {
 		if (!diving) {
 			float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
 			rot[1] = -55f;
-			CombatUtil.turn(p, rot, turnSpeed.f());
+			aim(p, rot);
 			if (rocketCd <= 0) {
 				InteractionHand hand = CombatUtil.holdItem(p, Items.FIREWORK_ROCKET, autoSwitch.value);
 				if (hand == null) {
@@ -271,7 +275,7 @@ public class MaceAura extends Module {
 		float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
 		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
 		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
-		CombatUtil.turn(p, rot, turnSpeed.f());
+		aim(p, rot);
 		status = "Diving";
 		if (dist > 14) {
 			return;
@@ -304,11 +308,41 @@ public class MaceAura extends Module {
 		if (requireCrosshair.value && box.clip(eye, eye.add(p.getLookAngle().scale(range.value))).isEmpty()) {
 			return;
 		}
+		if (stunFirst(mc, p, target)) {
+			return;
+		}
 		mc.gameMode.attack(p, target);
 		p.swing(InteractionHand.MAIN_HAND);
 		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
 		diving = false;
 		status = "Smash!";
+	}
+
+	/** Eased turning: covers part of the remaining angle each tick, capped by Turn Speed, so aim never snaps. */
+	private void aim(LocalPlayer p, float[] rot) {
+		float cap = turnSpeed.f();
+		float dy = net.minecraft.util.Mth.wrapDegrees(rot[0] - p.getYRot());
+		float dp = rot[1] - p.getXRot();
+		p.setYRot(p.getYRot() + net.minecraft.util.Mth.clamp(dy * 0.4f, -cap, cap));
+		p.setXRot(net.minecraft.util.Mth.clamp(p.getXRot() + net.minecraft.util.Mth.clamp(dp * 0.4f, -cap, cap), -90f, 90f));
+	}
+
+	/** Stun slam: a target that is blocking with a shield gets an axe hit first (it disables the shield), the mace follows. */
+	private boolean stunFirst(Minecraft mc, LocalPlayer p, LivingEntity target) {
+		if (!stunSlam.value || !(target instanceof net.minecraft.world.entity.player.Player pl) || !pl.isBlocking()) {
+			return false;
+		}
+		for (int i = 0; i < 9; i++) {
+			if (p.getInventory().getItem(i).is(ItemTags.AXES)) {
+				p.getInventory().setSelectedSlot(i);
+				mc.gameMode.attack(p, target);
+				p.swing(InteractionHand.MAIN_HAND);
+				attackDelay = 1;
+				status = "Stun!";
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private boolean swapped;
@@ -343,15 +377,18 @@ public class MaceAura extends Module {
 				p.getInventory().setSelectedSlot(slot);
 			}
 			float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
-			CombatUtil.turn(p, rot, 180f);
+			aim(p, rot);
 			if (p.getMainHandItem().is(Items.MACE)) {
+				if (stunFirst(mc, p, target)) {
+					return;
+				}
 				mc.gameMode.attack(p, target);
 				p.swing(InteractionHand.MAIN_HAND);
 				status = "Smash!";
 				done = true;
 			}
 		} else {
-			CombatUtil.turn(p, CombatUtil.rotationsTo(eye, box.getCenter()), turnSpeed.f());
+			aim(p, CombatUtil.rotationsTo(eye, box.getCenter()));
 		}
 		if (done || swapTicks > 8 || dist > range.value + 4 || p.onGround()) {
 			swapArmor(mc, p, elytraSlot);
@@ -380,7 +417,7 @@ public class MaceAura extends Module {
 		float[] rot = CombatUtil.rotationsTo(p.getEyePosition(), target.getBoundingBox().getCenter());
 		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
 		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
-		CombatUtil.turn(p, rot, turnSpeed.f());
+		aim(p, rot);
 		if (requireCrosshair.value) {
 			Vec3 eye = p.getEyePosition();
 			if (target.getBoundingBox().clip(eye, eye.add(p.getLookAngle().scale(range.value))).isEmpty()) {
@@ -388,6 +425,9 @@ public class MaceAura extends Module {
 			}
 		}
 		if (attackDelay > 0 || p.getAttackStrengthScale(0.5f) < 0.92f) {
+			return;
+		}
+		if (stunFirst(mc, p, target)) {
 			return;
 		}
 		mc.gameMode.attack(p, target);
