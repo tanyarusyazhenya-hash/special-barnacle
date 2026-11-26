@@ -11,6 +11,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
@@ -32,11 +33,12 @@ import java.util.concurrent.ThreadLocalRandom;
  * launch. Many servers ban this; it is not tested against any anti-cheat.
  */
 public class MaceAura extends Module {
-	public final ModeSetting launch = add(new ModeSetting("Launch", "Wind Charge", "Wind Charge", "None"));
+	public final ModeSetting launch = add(new ModeSetting("Launch", "Wind Charge", "Wind Charge", "Elytra", "None"));
 	public final BoolSetting players = add(new BoolSetting("Players", true));
 	public final BoolSetting hostile = add(new BoolSetting("Hostile Mobs", false));
 	public final NumberSetting range = add(new NumberSetting("Attack Range", 3.0, 2.0, 5.0, 0.1));
 	public final NumberSetting launchRange = add(new NumberSetting("Launch Range", 6, 3, 12, 1));
+	public final NumberSetting climbHeight = add(new NumberSetting("Elytra Climb Height", 30, 10, 100, 5));
 	public final NumberSetting minFall = add(new NumberSetting("Min Fall Distance", 2.5, 1.5, 20, 0.5));
 	public final NumberSetting launchDelay = add(new NumberSetting("Launch Delay (ticks)", 20, 5, 60, 1));
 	public final BoolSetting driftToTarget = add(new BoolSetting("Drift To Target", true));
@@ -55,6 +57,9 @@ public class MaceAura extends Module {
 		super("MaceAura", "Launches up and smashes targets with the mace", Category.COMBAT);
 		launchRange.visibleWhen(() -> launch.is("Wind Charge"));
 		launchDelay.visibleWhen(() -> launch.is("Wind Charge"));
+		climbHeight.visibleWhen(() -> launch.is("Elytra"));
+		minFall.visibleWhen(() -> !launch.is("Elytra"));
+		driftToTarget.visibleWhen(() -> !launch.is("Elytra"));
 	}
 
 	@Override
@@ -85,7 +90,7 @@ public class MaceAura extends Module {
 		if (attackDelay > 0) {
 			attackDelay--;
 		}
-		double scan = Math.max(range.value, launch.is("Wind Charge") ? launchRange.value : range.value) + 2;
+		double scan = launch.is("Elytra") ? 48 : Math.max(range.value, launch.is("Wind Charge") ? launchRange.value : range.value) + 2;
 		List<LivingEntity> list = CombatUtil.targets(mc, scan, players.value, hostile.value, false, true);
 		if (list.isEmpty()) {
 			status = "No target";
@@ -99,6 +104,10 @@ public class MaceAura extends Module {
 			return;
 		}
 
+		if (launch.is("Elytra")) {
+			elytra(mc, p, target);
+			return;
+		}
 		boolean grounded = p.onGround() && !p.isInWater();
 		if (grounded) {
 			if (!launch.is("Wind Charge")) {
@@ -184,6 +193,91 @@ public class MaceAura extends Module {
 		mc.gameMode.attack(p, target);
 		p.swing(InteractionHand.MAIN_HAND);
 		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
+		status = "Smash!";
+	}
+
+	private int rocketCd;
+	private boolean jumpPulse;
+	private boolean diving;
+
+	/**
+	 * Elytra mode: jump, open the elytra, climb with fireworks until Elytra Climb Height above the
+	 * target, then dive onto it with the mace. Needs an elytra worn, fireworks and a mace in the hotbar.
+	 * The smash bonus depends on how the server counts fall distance while gliding.
+	 */
+	private void elytra(Minecraft mc, LocalPlayer p, LivingEntity target) {
+		if (!p.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA)) {
+			status = "Wear an elytra";
+			return;
+		}
+		KeyMapping.setAll();
+		if (rocketCd > 0) {
+			rocketCd--;
+		}
+		if (!p.isFallFlying()) {
+			diving = false;
+			if (p.onGround()) {
+				mc.options.keyJump.setDown(true);
+				status = "Taking off";
+			} else if (p.getDeltaMovement().y < 0 && !p.isInWater()) {
+				jumpPulse = !jumpPulse;
+				if (jumpPulse) {
+					mc.options.keyJump.setDown(true);
+				}
+				status = "Opening elytra";
+			}
+			return;
+		}
+		Vec3 eye = p.getEyePosition();
+		AABB box = target.getBoundingBox();
+		double dist = CombatUtil.reach(p, target);
+		if (p.getY() >= target.getY() + climbHeight.value) {
+			diving = true;
+		}
+		if (!diving) {
+			float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
+			rot[1] = -55f;
+			CombatUtil.turn(p, rot, turnSpeed.f());
+			if (rocketCd <= 0) {
+				InteractionHand hand = CombatUtil.holdItem(p, Items.FIREWORK_ROCKET, autoSwitch.value);
+				if (hand == null) {
+					status = "No fireworks";
+					return;
+				}
+				mc.gameMode.useItem(p, hand);
+				p.swing(hand);
+				rocketCd = 22;
+			}
+			status = "Climbing";
+			return;
+		}
+		ThreadLocalRandom rnd = ThreadLocalRandom.current();
+		float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
+		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
+		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
+		CombatUtil.turn(p, rot, turnSpeed.f());
+		status = "Diving";
+		if (dist > 14) {
+			return;
+		}
+		if (!p.getMainHandItem().is(Items.MACE)) {
+			int slot = CombatUtil.findHotbar(p, Items.MACE);
+			if (slot < 0 || !autoSwitch.value) {
+				status = "Hold the mace";
+				return;
+			}
+			p.getInventory().setSelectedSlot(slot);
+		}
+		if (dist > range.value || attackDelay > 0) {
+			return;
+		}
+		if (requireCrosshair.value && box.clip(eye, eye.add(p.getLookAngle().scale(range.value))).isEmpty()) {
+			return;
+		}
+		mc.gameMode.attack(p, target);
+		p.swing(InteractionHand.MAIN_HAND);
+		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
+		diving = false;
 		status = "Smash!";
 	}
 
