@@ -12,6 +12,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.AABB;
@@ -39,6 +42,7 @@ public class MaceAura extends Module {
 	public final NumberSetting range = add(new NumberSetting("Attack Range", 3.0, 2.0, 5.0, 0.1));
 	public final NumberSetting launchRange = add(new NumberSetting("Launch Range", 6, 3, 12, 1));
 	public final NumberSetting climbHeight = add(new NumberSetting("Elytra Climb Height", 30, 10, 100, 5));
+	public final BoolSetting swapChest = add(new BoolSetting("Swap Chestplate For Hit", true));
 	public final NumberSetting minFall = add(new NumberSetting("Min Fall Distance", 2.5, 1.5, 20, 0.5));
 	public final NumberSetting launchDelay = add(new NumberSetting("Launch Delay (ticks)", 20, 5, 60, 1));
 	public final BoolSetting driftToTarget = add(new BoolSetting("Drift To Target", true));
@@ -58,6 +62,7 @@ public class MaceAura extends Module {
 		launchRange.visibleWhen(() -> launch.is("Wind Charge"));
 		launchDelay.visibleWhen(() -> launch.is("Wind Charge"));
 		climbHeight.visibleWhen(() -> launch.is("Elytra"));
+		swapChest.visibleWhen(() -> launch.is("Elytra"));
 		minFall.visibleWhen(() -> !launch.is("Elytra"));
 		driftToTarget.visibleWhen(() -> !launch.is("Elytra"));
 	}
@@ -74,6 +79,13 @@ public class MaceAura extends Module {
 
 	@Override
 	protected void onDisable() {
+		if (swapped) {
+			Minecraft mc = Minecraft.getInstance();
+			if (mc.player != null && mc.gameMode != null) {
+				swapArmor(mc, mc.player, elytraSlot);
+			}
+			swapped = false;
+		}
 		KeyMapping.setAll();
 	}
 
@@ -206,11 +218,15 @@ public class MaceAura extends Module {
 	 * The smash bonus depends on how the server counts fall distance while gliding.
 	 */
 	private void elytra(Minecraft mc, LocalPlayer p, LivingEntity target) {
+		KeyMapping.setAll();
+		if (swapped) {
+			swappedHit(mc, p, target);
+			return;
+		}
 		if (!p.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA)) {
 			status = "Wear an elytra";
 			return;
 		}
-		KeyMapping.setAll();
 		if (rocketCd > 0) {
 			rocketCd--;
 		}
@@ -260,6 +276,20 @@ public class MaceAura extends Module {
 		if (dist > 14) {
 			return;
 		}
+		if (swapChest.value) {
+			int cs = findChestplate(p);
+			if (cs >= 0) {
+				if (dist <= range.value + 2.5) {
+					swapArmor(mc, p, cs);
+					swapped = true;
+					elytraSlot = cs;
+					swapTicks = 0;
+					status = "Elytra off";
+				}
+				return;
+			}
+			status = "No chestplate in hotbar";
+		}
 		if (!p.getMainHandItem().is(Items.MACE)) {
 			int slot = CombatUtil.findHotbar(p, Items.MACE);
 			if (slot < 0 || !autoSwitch.value) {
@@ -279,6 +309,59 @@ public class MaceAura extends Module {
 		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
 		diving = false;
 		status = "Smash!";
+	}
+
+	private boolean swapped;
+	private int elytraSlot;
+	private int swapTicks;
+
+	private static int findChestplate(LocalPlayer p) {
+		for (int i = 0; i < 9; i++) {
+			ItemStack st = p.getInventory().getItem(i);
+			if (st.is(ItemTags.CHEST_ARMOR) && !st.is(Items.ELYTRA)) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	/** Swaps the worn chest item with a hotbar slot (the hotkey swap of the inventory screen). */
+	private void swapArmor(Minecraft mc, LocalPlayer p, int hotbar) {
+		mc.gameMode.handleInventoryMouseClick(p.inventoryMenu.containerId, 6, hotbar, ClickType.SWAP, p);
+	}
+
+	/** The elytra is off, so gliding has ended and the mace can smash: hit, then put the elytra back on. */
+	private void swappedHit(Minecraft mc, LocalPlayer p, LivingEntity target) {
+		swapTicks++;
+		Vec3 eye = p.getEyePosition();
+		AABB box = target.getBoundingBox();
+		double dist = CombatUtil.reach(p, target);
+		boolean done = false;
+		if (swapTicks >= 2 && dist <= range.value) {
+			int slot = CombatUtil.findHotbar(p, Items.MACE);
+			if (slot >= 0) {
+				p.getInventory().setSelectedSlot(slot);
+			}
+			float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
+			CombatUtil.turn(p, rot, 180f);
+			if (p.getMainHandItem().is(Items.MACE)) {
+				mc.gameMode.attack(p, target);
+				p.swing(InteractionHand.MAIN_HAND);
+				status = "Smash!";
+				done = true;
+			}
+		} else {
+			CombatUtil.turn(p, CombatUtil.rotationsTo(eye, box.getCenter()), turnSpeed.f());
+		}
+		if (done || swapTicks > 8 || dist > range.value + 4 || p.onGround()) {
+			swapArmor(mc, p, elytraSlot);
+			swapped = false;
+			diving = false;
+			rocketCd = 6;
+			if (!done) {
+				status = "Missed, elytra back on";
+			}
+		}
 	}
 
 	/** Plain mace hit when you are on the ground (no smash bonus, but it still hits). */
