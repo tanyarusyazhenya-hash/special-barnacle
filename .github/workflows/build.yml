@@ -21,3 +21,14 @@ jobs:
           path: |
             build/libs/*.jar
             !build/libs/*-sources.jar
+      - name: Build launcher (Aurora embedded)
+        run: |
+          JAR=$(ls build/libs/aurora-*.jar | grep -v -- '-sources' | grep -v -- '-dev' | head -1)
+          echo "Embedding $JAR"
+          cp "$JAR" launcher/src/main/resources/aurora-mod.jar
+          gradle -p launcher jar
+      - name: Upload launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraLauncher
+          path: launcher/build/libs/AuroraLauncher.jar

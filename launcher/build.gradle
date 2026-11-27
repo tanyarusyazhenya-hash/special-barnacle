@@ -1,0 +1,20 @@
+plugins {
+	id 'java'
+}
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+jar {
+	archiveFileName = 'AuroraLauncher.jar'
+	manifest {
+		attributes 'Main-Class': 'dev.aurora.launcher.Main'
+	}
+}
