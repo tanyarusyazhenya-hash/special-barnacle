@@ -244,22 +244,38 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 	private void findBases(Minecraft mc) {
 		bases.clear();
 		Set<Long> cells = new HashSet<>();
+		// bucket the signs into 24-block cells so each one only looks at its 3x3 neighbours
+		java.util.Map<Long, List<Sign>> grid = new java.util.HashMap<>();
+		for (Sign sg : signs) {
+			grid.computeIfAbsent(gridKey(Math.floorDiv(sg.pos().getX(), 24), Math.floorDiv(sg.pos().getZ(), 24)),
+				k -> new ArrayList<>()).add(sg);
+		}
 		for (Sign a : signs) {
 			int count = 0;
 			int storage = 0;
 			double sx = 0, sy = 0, sz = 0;
-			for (Sign b : signs) {
-				int dx = a.pos().getX() - b.pos().getX();
-				int dz = a.pos().getZ() - b.pos().getZ();
-				int dy = a.pos().getY() - b.pos().getY();
-				if (dx * dx + dz * dz <= 576 && Math.abs(dy) <= 24) {
-					count++;
-					if (b.storage()) {
-						storage++;
+			int gx = Math.floorDiv(a.pos().getX(), 24);
+			int gz = Math.floorDiv(a.pos().getZ(), 24);
+			for (int ox = -1; ox <= 1; ox++) {
+				for (int oz = -1; oz <= 1; oz++) {
+					List<Sign> near = grid.get(gridKey(gx + ox, gz + oz));
+					if (near == null) {
+						continue;
 					}
-					sx += b.pos().getX();
-					sy += b.pos().getY();
-					sz += b.pos().getZ();
+					for (Sign b : near) {
+						int dx = a.pos().getX() - b.pos().getX();
+						int dz = a.pos().getZ() - b.pos().getZ();
+						int dy = a.pos().getY() - b.pos().getY();
+						if (dx * dx + dz * dz <= 576 && Math.abs(dy) <= 24) {
+							count++;
+							if (b.storage()) {
+								storage++;
+							}
+							sx += b.pos().getX();
+							sy += b.pos().getY();
+							sz += b.pos().getZ();
+						}
+					}
 				}
 			}
 			if (count < minBlocks.i() || storage < minStorage.i()) {
@@ -276,6 +292,10 @@ public class BaseFinder extends Module implements EspProvider, LineProvider {
 				announce(mc, center, count, storage);
 			}
 		}
+	}
+
+	private static long gridKey(int x, int z) {
+		return ((long) x << 32) ^ (z & 0xFFFFFFFFL);
 	}
 
 	private void announce(Minecraft mc, Vec3 c, int count, int storage) {

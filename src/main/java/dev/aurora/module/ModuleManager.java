@@ -88,6 +88,7 @@ public final class ModuleManager {
 	public static TriggerBot triggerBot;
 	public static PopCounter popCounter;
 	public static TimeChanger timeChanger;
+	public static FpsBoost fpsBoost;
 	public static CustomCrosshair crosshair;
 	public static TargetAura targetAura;
 	public static Hitboxes hitboxes;
@@ -131,6 +132,7 @@ public final class ModuleManager {
 		triggerBot = new TriggerBot();
 		popCounter = new PopCounter();
 		timeChanger = new TimeChanger();
+		fpsBoost = new FpsBoost();
 		crosshair = new CustomCrosshair();
 		targetAura = new TargetAura();
 		hitboxes = new Hitboxes();
@@ -162,6 +164,7 @@ public final class ModuleManager {
 		MODULES.add(chinaHat);
 		MODULES.add(particles);
 		MODULES.add(timeChanger);
+		MODULES.add(fpsBoost);
 		MODULES.add(crosshair);
 		MODULES.add(hitboxes);
 		MODULES.add(predictions);

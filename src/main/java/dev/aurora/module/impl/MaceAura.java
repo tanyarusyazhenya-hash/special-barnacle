@@ -107,7 +107,9 @@ public class MaceAura extends Module {
 		if (attackDelay > 0) {
 			attackDelay--;
 		}
-		trackPops(mc);
+		if (++popTick % 4 == 0) {
+			trackPops(mc);
+		}
 		double scan = launch.is("Elytra") ? 48 : Math.max(range.value, launch.is("Wind Charge") ? launchRange.value : range.value) + 2;
 		List<LivingEntity> list = CombatUtil.targets(mc, scan, players.value, hostile.value, false, true);
 		if (list.isEmpty()) {
@@ -403,6 +405,7 @@ public class MaceAura extends Module {
 		}
 	}
 
+	private int popTick;
 	private boolean swapped;
 	private int elytraSlot;
 	private int swapTicks;
