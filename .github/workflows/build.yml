@@ -33,3 +33,24 @@ jobs:
         with:
           name: AuroraLauncher
           path: launcher/build/libs/AuroraLauncher.jar
+  windows-exe:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@v4
+        with:
+          name: AuroraLauncher
+          path: in
+      - name: Package launcher with bundled Java
+        shell: bash
+        run: |
+          jpackage --type app-image --name AuroraLauncher --input in --main-jar AuroraLauncher.jar --main-class dev.aurora.launcher.Main --dest out
+          ls out/AuroraLauncher
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AuroraLauncher-Windows
+          path: out/AuroraLauncher
