@@ -42,6 +42,9 @@ public class MaceAura extends Module {
 	public final NumberSetting range = add(new NumberSetting("Attack Range", 3.0, 2.0, 5.0, 0.1));
 	public final NumberSetting launchRange = add(new NumberSetting("Launch Range", 6, 3, 12, 1));
 	public final NumberSetting climbHeight = add(new NumberSetting("Elytra Climb Height", 30, 10, 100, 5));
+	public final ModeSetting priority = add(new ModeSetting("Target Priority", "Closest", "Closest", "Lowest Health",
+		"Lowest Armor", "No Shield"));
+	public final BoolSetting combo = add(new BoolSetting("Combo Mode", true));
 	public final BoolSetting focusPopped = add(new BoolSetting("Focus Popped Target", true));
 	public final NumberSetting focusTime = add(new NumberSetting("Focus Time (s)", 15, 3, 60, 1));
 	public final ModeSetting profile = add(new ModeSetting("Anti-Cheat Profile", "Legit", "Off", "Legit", "Strict"));
@@ -116,8 +119,26 @@ public class MaceAura extends Module {
 			status = "No target";
 			return;
 		}
+		if (comboTarget != null && list.stream().noneMatch(e -> e.getUUID().equals(comboTarget))) {
+			comboTarget = null;
+		}
 		list.sort(Comparator.comparingDouble(e -> CombatUtil.reach(p, e)));
+		switch (priority.get()) {
+			case "Lowest Health" -> list.sort(Comparator.comparingDouble(e -> e.getHealth() + e.getAbsorptionAmount()));
+			case "Lowest Armor" -> list.sort(Comparator.comparingDouble(e -> e.getArmorValue()));
+			case "No Shield" -> list.sort(Comparator.comparingInt((LivingEntity e) -> e.isBlocking() ? 1 : 0)
+				.thenComparingDouble(e -> CombatUtil.reach(p, e)));
+			default -> { }
+		}
 		LivingEntity target = list.get(0);
+		if (combo.value && comboTarget != null) {
+			for (LivingEntity e : list) {
+				if (e.getUUID().equals(comboTarget)) {
+					target = e;
+					break;
+				}
+			}
+		}
 		if (focusPopped.value) {
 			for (LivingEntity e : list) {
 				Long t = popped.get(e.getUUID());
@@ -230,6 +251,7 @@ public class MaceAura extends Module {
 		p.swing(InteractionHand.MAIN_HAND);
 		attackDelay = randomDelay.value || !profile.is("Off") ? 2 + rnd.nextInt(3) : 0;
 		status = "Smash!";
+		afterHit(target);
 	}
 
 	private int rocketCd;
@@ -340,6 +362,7 @@ public class MaceAura extends Module {
 		attackDelay = randomDelay.value || !profile.is("Off") ? 2 + rnd.nextInt(3) : 0;
 		diving = false;
 		status = "Smash!";
+		afterHit(target);
 	}
 
 	/** Eased turning: covers part of the remaining angle each tick, capped by Turn Speed, so aim never snaps. */
@@ -405,7 +428,17 @@ public class MaceAura extends Module {
 		}
 	}
 
+	/** Combo Mode: keep hitting the same target and relaunch quickly until it dies or leaves. */
+	private void afterHit(LivingEntity target) {
+		if (!combo.value) {
+			return;
+		}
+		comboTarget = target.getUUID();
+		launchCooldown = Math.min(launchCooldown, 5);
+	}
+
 	private int popTick;
+	private java.util.UUID comboTarget;
 	private boolean swapped;
 	private int elytraSlot;
 	private int swapTicks;
@@ -450,6 +483,7 @@ public class MaceAura extends Module {
 				mc.gameMode.attack(p, target);
 				p.swing(InteractionHand.MAIN_HAND);
 				status = "Smash!";
+		afterHit(target);
 				done = true;
 			}
 		} else {
