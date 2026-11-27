@@ -29,7 +29,8 @@ import java.util.Locale;
 
 /** Draws the watermark, module list, info stack, armor row and the left-side panels. */
 public final class HudRenderer {
-	private static final int ROW_H = 11;
+	private static final int ROW_H = 12;
+	private static final java.util.Map<String, Float> SLIDE = new java.util.HashMap<>();
 	private static final int BG = 0x0B0B10;
 
 	private HudRenderer() {}
@@ -52,15 +53,16 @@ public final class HudRenderer {
 			String version = " §71.21.11";
 			int bw = font.width(name) + font.width(version) + 30;
 			if (h.background.value) {
-				GuiUtil.rrect(g, 4, 4, bw, 14, 3, ColorUtil.argb(BG, h.bgOpacity.f()));
+				GuiUtil.rrect(g, 3, 3, bw + 2, 16, 8, ColorUtil.argb(colorFor(h, accent, 0), 0.22f));
+				GuiUtil.rrect(g, 4, 4, bw, 14, 7, ColorUtil.argb(BG, Math.max(0.55f, h.bgOpacity.f())));
 			}
 			if (h.accentBar.value) {
-				// logo badge: accent square with a bold dark "A"
-				GuiUtil.rrect(g, 7, 6, 12, 12, 3, ColorUtil.argb(colorFor(h, accent, 0), 1f));
-				g.drawString(font, Component.literal("A").withStyle(ChatFormatting.BOLD), 10, 8, 0xFF0C0C0E, false);
+				// logo badge: accent circle with a bold dark "A"
+				GuiUtil.rrect(g, 7, 6, 12, 12, 6, ColorUtil.argb(colorFor(h, accent, 0), 1f));
+				g.drawString(font, Component.literal("A").withStyle(ChatFormatting.BOLD), 11, 8, 0xFF0C0C0E, false);
 			}
 			text(g, font, h, name + version, h.accentBar.value ? 24 : 10, 8, colorFor(h, accent, 0));
-			topLeftY = 22;
+			topLeftY = 24;
 		}
 
 		// Module list
@@ -78,8 +80,18 @@ public final class HudRenderer {
 			boolean right = h.listSide.is("Right");
 			int y = right ? 4 : topLeftY;
 			int i = 0;
+			java.util.Set<String> keys = new java.util.HashSet<>();
 			for (String label : labels) {
-				drawRow(g, font, h, label, right, gw, y, colorFor(h, accent, i++));
+				keys.add(label.split(" §7")[0]);
+			}
+			SLIDE.keySet().removeIf(k -> !keys.contains(k));
+			for (String label : labels) {
+				String key = label.split(" §7")[0];
+				float a = SLIDE.getOrDefault(key, 0f);
+				a += (1f - a) * 0.18f;
+				SLIDE.put(key, a);
+				int off = Math.round((1f - a) * (font.width(label) + 14)) * (right ? 1 : -1);
+				drawRow(g, font, h, label, right, gw, y, colorFor(h, accent, i++), off);
 				y += ROW_H + 1;
 			}
 		}
@@ -200,14 +212,20 @@ public final class HudRenderer {
 	}
 
 	private static void drawRow(GuiGraphics g, Font font, HudModule h, String label, boolean right, int gw, int y, int rgb) {
-		int bw = font.width(label) + 8;
-		int x = right ? gw - 4 - bw : 4;
+		drawRow(g, font, h, label, right, gw, y, rgb, 0);
+	}
+
+	private static void drawRow(GuiGraphics g, Font font, HudModule h, String label, boolean right, int gw, int y, int rgb,
+								int dx) {
+		int bw = font.width(label) + 10;
+		int x = (right ? gw - 4 - bw : 4) + dx;
 		if (h.background.value) {
-			GuiUtil.rrect(g, x, y, bw, ROW_H, 2, ColorUtil.argb(BG, h.bgOpacity.f()));
+			GuiUtil.rrect(g, x - 1, y - 1, bw + 2, ROW_H + 1, 5, ColorUtil.argb(rgb, 0.16f));
+			GuiUtil.rrect(g, x, y, bw, ROW_H - 1, 4, ColorUtil.argb(BG, h.bgOpacity.f()));
 		}
 		if (h.accentBar.value) {
-			int bx = right ? x + bw - 2 : x;
-			g.fill(bx, y + 1, bx + 2, y + ROW_H - 1, ColorUtil.argb(rgb, 1f));
+			int bx = right ? x + bw - 3 : x + 1;
+			GuiUtil.rrect(g, bx, y + 2, 2, ROW_H - 5, 1, ColorUtil.argb(rgb, 1f));
 		}
 		text(g, font, h, label, x + (right ? 4 : 6), y + 2, rgb);
 	}

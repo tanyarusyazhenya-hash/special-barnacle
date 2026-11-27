@@ -44,7 +44,7 @@ import java.util.Set;
 public class ClickGuiScreen extends Screen {
 	private static final int TB = 28; // title bar height
 	private static final int SB = 92; // sidebar width
-	private static final int ROW = 20; // module row height
+	private static final int ROW = 22; // module row height
 	private static final int TEXT = 0xD2D2D8;
 	private static final int DIM = 0x7C7C86;
 
@@ -156,11 +156,11 @@ public class ClickGuiScreen extends Screen {
 		int curH = TB + Math.round((winH - TB) * minAnim);
 
 		// glow, border, body
-		for (int i = 3; i >= 1; i--) {
-			GuiUtil.rrect(g, x0 - i * 2, y0 - i * 2, winW + i * 4, curH + i * 4, 8 + i * 2, c(accent, 0.035f * (4 - i)));
+		for (int i = 6; i >= 1; i--) {
+			GuiUtil.rrect(g, x0 - i * 2, y0 - i * 2 + 4, winW + i * 4, curH + i * 4, 10 + i * 2, c(accent, 0.016f * (7 - i)));
 		}
-		GuiUtil.rrect(g, x0 - 1, y0 - 1, winW + 2, curH + 2, 8, c(accent, 0.55f));
-		GuiUtil.rrect(g, x0, y0, winW, curH, 7, c(0x0C0C0E, 0.97f));
+		GuiUtil.rrect(g, x0 - 1, y0 - 1, winW + 2, curH + 2, 11, c(accent, 0.42f));
+		GuiUtil.rrect(g, x0, y0, winW, curH, 10, c(0x0A0A0D, 0.97f));
 		if (curH > TB + 6) {
 			g.fillGradient(x0 + 2, y0 + TB + 1, x0 + winW - 2, y0 + curH - 3, c(accent, 0f), c(accent, 0.07f));
 		}
@@ -193,7 +193,7 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private void renderTitleBar(GuiGraphics g, Font font, int mx, int my, int accent) {
-		GuiUtil.rrect(g, x0, y0, winW, TB, 7, c(0x111114, 1f));
+		GuiUtil.rrect(g, x0, y0, winW, TB, 10, c(0x101013, 1f));
 		g.fill(x0, y0 + TB - 7, x0 + winW, y0 + TB, c(0x111114, 1f));
 		if (ModuleManager.ui.gradient.value) {
 			for (int i = 0; i < winW - 2; i++) {
@@ -504,8 +504,9 @@ public class ClickGuiScreen extends Screen {
 	}
 
 	private void card(GuiGraphics g, int x, int y, int w, int h) {
-		GuiUtil.rrect(g, x - 1, y - 1, w + 2, h + 2, 6, c(0xFFFFFF, 0.07f));
-		GuiUtil.rrect(g, x, y, w, h, 5, c(0x131316, 0.96f));
+		GuiUtil.rrect(g, x - 1, y - 1, w + 2, h + 2, 9, c(0xFFFFFF, 0.06f));
+		GuiUtil.rrect(g, x, y, w, h, 8, c(0x121215, 0.96f));
+		g.fill(x + 8, y, x + w - 8, y + 1, c(0xFFFFFF, 0.06f));
 	}
 
 	private void scrollbar(GuiGraphics g, int x, int top, int view, int content, float scroll, int accent) {
@@ -523,19 +524,22 @@ public class ClickGuiScreen extends Screen {
 		m.enableAnim += ((m.isEnabled() ? 1f : 0f) - m.enableAnim) * 0.2f;
 		boolean hover = hit(mx, my, lx + 4, y, leftW - 8, ROW - 2);
 
+		if (m.enableAnim > 0.02f) {
+			GuiUtil.rrect(g, lx + 4, y, leftW - 8, ROW - 2, 6, c(accent, 0.16f * m.enableAnim));
+		}
 		if (isFocus) {
-			GuiUtil.rrect(g, lx + 4, y, leftW - 8, ROW - 2, 4, c(accent, 0.18f));
-			g.fill(lx + 4, y + 3, lx + 6, y + ROW - 5, c(accent, 1f));
+			GuiUtil.rrect(g, lx + 4, y, leftW - 8, ROW - 2, 6, c(0xFFFFFF, 0.06f));
+			GuiUtil.rrect(g, lx + 5, y + 4, 2, ROW - 10, 1, c(accent, 1f));
 		} else if (hover) {
-			GuiUtil.rrect(g, lx + 4, y, leftW - 8, ROW - 2, 4, c(0xFFFFFF, 0.05f));
+			GuiUtil.rrect(g, lx + 4, y, leftW - 8, ROW - 2, 6, c(0xFFFFFF, 0.05f));
 		}
 
 		int tc = m.hasToggle() ? ColorUtil.lerp(0x8E8E98, 0xFFFFFF, m.enableAnim) : 0xFFFFFF;
-		g.drawString(font, m.name, lx + 14, y + 5, c(tc, 1f), false);
+		g.drawString(font, m.name, lx + 14, y + 6, c(tc, 1f), false);
 		if (m.hasToggle()) {
-			toggle(g, lx + leftW - 10 - 26, y + 3, m.enableAnim, accent);
+			toggle(g, lx + leftW - 10 - 28, y + 3, m.enableAnim, accent);
 		} else {
-			g.drawString(font, ">", lx + leftW - 16, y + 5, c(DIM, 1f), false);
+			g.drawString(font, ">", lx + leftW - 16, y + 6, c(DIM, 1f), false);
 		}
 
 		addRegion(lx + 4, y, leftW - 8, ROW - 2, (clickX, clickY, button) -> {
@@ -732,11 +736,14 @@ public class ClickGuiScreen extends Screen {
 
 	/** Pill switch like the reference: accent when on, grey when off. */
 	private void toggle(GuiGraphics g, int x, int y, float anim, int accent) {
-		int w = 26;
-		int h = 13;
-		GuiUtil.rrect(g, x, y, w, h, 6, c(ColorUtil.lerp(0x2C2C32, accent, anim), 1f));
+		int w = 28;
+		int h = 14;
+		if (anim > 0.02f) {
+			GuiUtil.rrect(g, x - 2, y - 2, w + 4, h + 4, 8, c(accent, 0.22f * anim));
+		}
+		GuiUtil.rrect(g, x, y, w, h, 7, c(ColorUtil.lerp(0x26262C, accent, anim), 1f));
 		int kx = x + 2 + Math.round((w - h) * anim);
-		GuiUtil.rrect(g, kx, y + 2, 9, 9, 4, c(ColorUtil.lerp(0x8A8A92, 0xFFE9D6, anim), 1f));
+		GuiUtil.rrect(g, kx, y + 2, 10, 10, 5, c(ColorUtil.lerp(0x8A8A92, 0xFFFFFF, anim), 1f));
 	}
 
 	private void chevron(GuiGraphics g, int cx, int cy, int rgb, boolean up) {
