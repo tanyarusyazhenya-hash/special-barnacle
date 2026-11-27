@@ -25,6 +25,7 @@ import dev.aurora.module.impl.Macros;
 import dev.aurora.module.impl.Particles;
 import dev.aurora.module.impl.CustomCrosshair;
 import dev.aurora.module.impl.PopCounter;
+import dev.aurora.module.impl.FpsBoost;
 import dev.aurora.module.impl.TimeChanger;
 import dev.aurora.module.impl.TriggerBot;
 import dev.aurora.module.impl.Hitboxes;

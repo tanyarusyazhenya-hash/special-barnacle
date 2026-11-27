@@ -4,7 +4,6 @@ import dev.aurora.module.Category;
 import dev.aurora.module.Module;
 import dev.aurora.setting.BoolSetting;
 import dev.aurora.setting.NumberSetting;
-import net.minecraft.client.CloudStatus;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.ParticleStatus;
 
@@ -14,14 +13,12 @@ import net.minecraft.client.ParticleStatus;
  */
 public class FpsBoost extends Module {
 	public final BoolSetting particles = add(new BoolSetting("Minimal Particles", true));
-	public final BoolSetting clouds = add(new BoolSetting("Clouds Off", true));
 	public final BoolSetting shadows = add(new BoolSetting("Entity Shadows Off", true));
 	public final BoolSetting blend = add(new BoolSetting("Biome Blend Off", true));
 	public final NumberSetting entityDistance = add(new NumberSetting("Entity Distance %", 60, 50, 100, 10));
 
 	private boolean saved;
 	private ParticleStatus oldParticles;
-	private CloudStatus oldClouds;
 	private boolean oldShadows;
 	private int oldBlend;
 	private double oldEntity;
@@ -35,7 +32,6 @@ public class FpsBoost extends Module {
 		Minecraft mc = Minecraft.getInstance();
 		var o = mc.options;
 		oldParticles = o.particles().get();
-		oldClouds = o.cloudStatus().get();
 		oldShadows = o.entityShadows().get();
 		oldBlend = o.biomeBlendRadius().get();
 		oldEntity = o.entityDistanceScaling().get();
@@ -47,9 +43,6 @@ public class FpsBoost extends Module {
 		var o = mc.options;
 		if (particles.value && o.particles().get() != ParticleStatus.MINIMAL) {
 			o.particles().set(ParticleStatus.MINIMAL);
-		}
-		if (clouds.value && o.cloudStatus().get() != CloudStatus.OFF) {
-			o.cloudStatus().set(CloudStatus.OFF);
 		}
 		if (shadows.value && o.entityShadows().get()) {
 			o.entityShadows().set(false);
@@ -71,7 +64,6 @@ public class FpsBoost extends Module {
 		saved = false;
 		var o = Minecraft.getInstance().options;
 		o.particles().set(oldParticles);
-		o.cloudStatus().set(oldClouds);
 		o.entityShadows().set(oldShadows);
 		o.biomeBlendRadius().set(oldBlend);
 		o.entityDistanceScaling().set(oldEntity);
