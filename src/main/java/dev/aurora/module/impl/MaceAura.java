@@ -44,6 +44,7 @@ public class MaceAura extends Module {
 	public final NumberSetting climbHeight = add(new NumberSetting("Elytra Climb Height", 30, 10, 100, 5));
 	public final BoolSetting focusPopped = add(new BoolSetting("Focus Popped Target", true));
 	public final NumberSetting focusTime = add(new NumberSetting("Focus Time (s)", 15, 3, 60, 1));
+	public final ModeSetting profile = add(new ModeSetting("Anti-Cheat Profile", "Legit", "Off", "Legit", "Strict"));
 	public final BoolSetting stunSlam = add(new BoolSetting("Stun Slam (axe vs shield)", true));
 	public final BoolSetting swapChest = add(new BoolSetting("Swap Chestplate For Hit", true));
 	public final NumberSetting minFall = add(new NumberSetting("Min Fall Distance", 2.5, 1.5, 20, 0.5));
@@ -180,8 +181,8 @@ public class MaceAura extends Module {
 		Vec3 eye = p.getEyePosition();
 		AABB box = target.getBoundingBox();
 		float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
-		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
-		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
+		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * Math.max(aimNoise.value, profile.is("Off") ? 0.0 : 0.4));
+		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * Math.max(aimNoise.value, profile.is("Off") ? 0.0 : 0.4));
 		aim(p, rot);
 
 		if (driftToTarget.value) {
@@ -216,12 +217,16 @@ public class MaceAura extends Module {
 		if (attackDelay > 0) {
 			return;
 		}
+		if (skipSwing()) {
+			attackDelay = 2;
+			return;
+		}
 		if (stunFirst(mc, p, target)) {
 			return;
 		}
 		mc.gameMode.attack(p, target);
 		p.swing(InteractionHand.MAIN_HAND);
-		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
+		attackDelay = randomDelay.value || !profile.is("Off") ? 2 + rnd.nextInt(3) : 0;
 		status = "Smash!";
 	}
 
@@ -286,8 +291,8 @@ public class MaceAura extends Module {
 		}
 		ThreadLocalRandom rnd = ThreadLocalRandom.current();
 		float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
-		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
-		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
+		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * Math.max(aimNoise.value, profile.is("Off") ? 0.0 : 0.4));
+		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * Math.max(aimNoise.value, profile.is("Off") ? 0.0 : 0.4));
 		aim(p, rot);
 		status = "Diving";
 		if (dist > 14) {
@@ -318,7 +323,11 @@ public class MaceAura extends Module {
 		if (dist > range.value || attackDelay > 0) {
 			return;
 		}
-		if (requireCrosshair.value && box.clip(eye, eye.add(p.getLookAngle().scale(range.value))).isEmpty()) {
+		if ((requireCrosshair.value || profile.is("Strict")) && box.clip(eye, eye.add(p.getLookAngle().scale(range.value))).isEmpty()) {
+			return;
+		}
+		if (skipSwing()) {
+			attackDelay = 2;
 			return;
 		}
 		if (stunFirst(mc, p, target)) {
@@ -326,18 +335,33 @@ public class MaceAura extends Module {
 		}
 		mc.gameMode.attack(p, target);
 		p.swing(InteractionHand.MAIN_HAND);
-		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
+		attackDelay = randomDelay.value || !profile.is("Off") ? 2 + rnd.nextInt(3) : 0;
 		diving = false;
 		status = "Smash!";
 	}
 
 	/** Eased turning: covers part of the remaining angle each tick, capped by Turn Speed, so aim never snaps. */
 	private void aim(LocalPlayer p, float[] rot) {
-		float cap = turnSpeed.f();
+		float cap = turnSpeed.f() * (profile.is("Strict") ? 0.7f : 1f);
 		float dy = net.minecraft.util.Mth.wrapDegrees(rot[0] - p.getYRot());
 		float dp = rot[1] - p.getXRot();
-		p.setYRot(p.getYRot() + net.minecraft.util.Mth.clamp(dy * 0.4f, -cap, cap));
-		p.setXRot(net.minecraft.util.Mth.clamp(p.getXRot() + net.minecraft.util.Mth.clamp(dp * 0.4f, -cap, cap), -90f, 90f));
+		float my = net.minecraft.util.Mth.clamp(dy * 0.4f, -cap, cap);
+		float mp = net.minecraft.util.Mth.clamp(dp * 0.4f, -cap, cap);
+		if (!profile.is("Off")) {
+			// round to steps a real mouse at your sensitivity can make (the "GCD" that aim checks look for)
+			double sens = Minecraft.getInstance().options.sensitivity().get() * 0.6 + 0.2;
+			double gcd = sens * sens * sens * 8.0 * 0.15;
+			my = (float) (Math.round(my / gcd) * gcd);
+			mp = (float) (Math.round(mp / gcd) * gcd);
+		}
+		p.setYRot(p.getYRot() + my);
+		p.setXRot(net.minecraft.util.Mth.clamp(p.getXRot() + mp, -90f, 90f));
+	}
+
+	/** Legit / Strict: a small chance to skip a swing, so hits are not perfectly regular. */
+	private boolean skipSwing() {
+		double chance = profile.is("Strict") ? 0.04 : profile.is("Legit") ? 0.02 : 0.0;
+		return chance > 0 && ThreadLocalRandom.current().nextDouble() < chance;
 	}
 
 	/** Stun slam: a target that is blocking with a shield gets an axe hit first (it disables the shield), the mace follows. */
@@ -413,6 +437,10 @@ public class MaceAura extends Module {
 			float[] rot = CombatUtil.rotationsTo(eye, box.getCenter());
 			aim(p, rot);
 			if (p.getMainHandItem().is(Items.MACE)) {
+				if (skipSwing()) {
+					attackDelay = 2;
+					return;
+				}
 				if (stunFirst(mc, p, target)) {
 					return;
 				}
@@ -449,8 +477,8 @@ public class MaceAura extends Module {
 		}
 		ThreadLocalRandom rnd = ThreadLocalRandom.current();
 		float[] rot = CombatUtil.rotationsTo(p.getEyePosition(), target.getBoundingBox().getCenter());
-		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
-		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * aimNoise.value);
+		rot[0] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * Math.max(aimNoise.value, profile.is("Off") ? 0.0 : 0.4));
+		rot[1] += (float) ((rnd.nextDouble() - 0.5) * 2.0 * Math.max(aimNoise.value, profile.is("Off") ? 0.0 : 0.4));
 		aim(p, rot);
 		if (requireCrosshair.value) {
 			Vec3 eye = p.getEyePosition();
@@ -461,12 +489,16 @@ public class MaceAura extends Module {
 		if (attackDelay > 0 || p.getAttackStrengthScale(0.5f) < 0.92f) {
 			return;
 		}
+		if (skipSwing()) {
+			attackDelay = 2;
+			return;
+		}
 		if (stunFirst(mc, p, target)) {
 			return;
 		}
 		mc.gameMode.attack(p, target);
 		p.swing(InteractionHand.MAIN_HAND);
-		attackDelay = randomDelay.value ? 2 + rnd.nextInt(3) : 0;
+		attackDelay = randomDelay.value || !profile.is("Off") ? 2 + rnd.nextInt(3) : 0;
 		status = "Hit";
 	}
 }
