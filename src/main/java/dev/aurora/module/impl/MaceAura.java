@@ -42,6 +42,8 @@ public class MaceAura extends Module {
 	public final NumberSetting range = add(new NumberSetting("Attack Range", 3.0, 2.0, 5.0, 0.1));
 	public final NumberSetting launchRange = add(new NumberSetting("Launch Range", 6, 3, 12, 1));
 	public final NumberSetting climbHeight = add(new NumberSetting("Elytra Climb Height", 30, 10, 100, 5));
+	public final BoolSetting focusPopped = add(new BoolSetting("Focus Popped Target", true));
+	public final NumberSetting focusTime = add(new NumberSetting("Focus Time (s)", 15, 3, 60, 1));
 	public final BoolSetting stunSlam = add(new BoolSetting("Stun Slam (axe vs shield)", true));
 	public final BoolSetting swapChest = add(new BoolSetting("Swap Chestplate For Hit", true));
 	public final NumberSetting minFall = add(new NumberSetting("Min Fall Distance", 2.5, 1.5, 20, 0.5));
@@ -62,6 +64,7 @@ public class MaceAura extends Module {
 		super("MaceAura", "Launches up and smashes targets with the mace", Category.COMBAT);
 		launchRange.visibleWhen(() -> launch.is("Wind Charge"));
 		launchDelay.visibleWhen(() -> launch.is("Wind Charge"));
+		focusTime.visibleWhen(() -> focusPopped.value);
 		climbHeight.visibleWhen(() -> launch.is("Elytra"));
 		swapChest.visibleWhen(() -> launch.is("Elytra"));
 		minFall.visibleWhen(() -> !launch.is("Elytra"));
@@ -103,6 +106,7 @@ public class MaceAura extends Module {
 		if (attackDelay > 0) {
 			attackDelay--;
 		}
+		trackPops(mc);
 		double scan = launch.is("Elytra") ? 48 : Math.max(range.value, launch.is("Wind Charge") ? launchRange.value : range.value) + 2;
 		List<LivingEntity> list = CombatUtil.targets(mc, scan, players.value, hostile.value, false, true);
 		if (list.isEmpty()) {
@@ -111,6 +115,15 @@ public class MaceAura extends Module {
 		}
 		list.sort(Comparator.comparingDouble(e -> CombatUtil.reach(p, e)));
 		LivingEntity target = list.get(0);
+		if (focusPopped.value) {
+			for (LivingEntity e : list) {
+				Long t = popped.get(e.getUUID());
+				if (t != null && System.currentTimeMillis() - t < focusTime.value * 1000) {
+					target = e;
+					break;
+				}
+			}
+		}
 
 		if (CombatUtil.findHotbar(p, Items.MACE) < 0 && !p.getMainHandItem().is(Items.MACE)) {
 			status = "No mace in hotbar";
@@ -343,6 +356,27 @@ public class MaceAura extends Module {
 			}
 		}
 		return false;
+	}
+
+	private final java.util.Map<java.util.UUID, Long> popped = new java.util.HashMap<>();
+	private final java.util.Set<java.util.UUID> poppedNow = new java.util.HashSet<>();
+
+	/** Notes players whose totem just popped (Regeneration II + Absorption appear), same guess as PopCounter. */
+	private void trackPops(Minecraft mc) {
+		popped.values().removeIf(t -> System.currentTimeMillis() - t > 60000);
+		for (net.minecraft.world.entity.player.Player pl : mc.level.players()) {
+			if (pl == mc.player) {
+				continue;
+			}
+			var regen = pl.getEffect(net.minecraft.world.effect.MobEffects.REGENERATION);
+			boolean totemLike = regen != null && regen.getAmplifier() == 1 && regen.getDuration() >= 860
+				&& pl.getEffect(net.minecraft.world.effect.MobEffects.ABSORPTION) != null;
+			if (totemLike && poppedNow.add(pl.getUUID())) {
+				popped.put(pl.getUUID(), System.currentTimeMillis());
+			} else if (!totemLike && (regen == null || regen.getDuration() < 800)) {
+				poppedNow.remove(pl.getUUID());
+			}
+		}
 	}
 
 	private boolean swapped;
